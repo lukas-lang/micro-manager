@@ -497,6 +497,7 @@ m4_define([device_adapter_dirs], [m4_strip([
    SimpleAutofocus
    SimpleCam
    SmarActHCU-3D
+   SimulatingCamera
    SpectralLMM5
    Spot
    SutterLambda

@@ -149,6 +149,7 @@ SUBDIRS = \
 	SerialManager \
 	SimpleAutofocus \
 	SmarActHCU-3D \
+	SimulatingCamera \
 	SpectralLMM5 \
 	SutterLambda \
 	SutterStage \
