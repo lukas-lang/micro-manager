@@ -163,6 +163,11 @@ int CDemoCamera::Initialize()
    // CameraID
    nRet = CreateStringProperty(MM::g_Keyword_CameraID, "V1.0", true);
    assert(nRet == DEVICE_OK);
+   
+
+   
+   
+
 
    // binning
    CPropertyAction *pAct = new CPropertyAction (this, &CDemoCamera::OnBinning);
@@ -172,6 +177,10 @@ int CDemoCamera::Initialize()
    nRet = SetAllowedBinning();
    if (nRet != DEVICE_OK)
       return nRet;
+   
+   pAct = new CPropertyAction (this, &CDemoCamera::OnURL);
+   nRet = CreateProperty("URL", "http://localhost:8888/", MM::String, false, pAct, false); 
+   assert(nRet == DEVICE_OK);
 
    // pixel type
    pAct = new CPropertyAction (this, &CDemoCamera::OnPixelType);
@@ -351,6 +360,9 @@ int CDemoCamera::Shutdown()
    return DEVICE_OK;
 }
 
+
+#include "picohttpclient.hpp"
+
 /**
 * Performs exposure and grabs a single image.
 * This function should block during the actual exposure and return immediately afterwards 
@@ -369,8 +381,18 @@ int CDemoCamera::SnapImage()
    GetCoreCallback()->GetFocusPosition(z);
    
    // This works ... properly fetches <x,y,z> coordinates
+      
+   URI theUri(URL);
    
+   theUri.querystring = string("width=") + CDeviceUtils::ConvertToString((int)img_.Width()) + "&" 
+    "height=" + CDeviceUtils::ConvertToString((int)img_.Height()) + "&"
+    "depth=" + CDeviceUtils::ConvertToString((int)img_.Depth()) + "&" 
+    "x=" + CDeviceUtils::ConvertToString(x) + "&" 
+    "y=" + CDeviceUtils::ConvertToString(y) + "&" 
+    "z=" + CDeviceUtils::ConvertToString(z); 
 
+   HTTPResponse response = HTTPClient::request(HTTPClient::GET, theUri);
+   
    MM::MMTime startTime = GetCurrentMMTime();
    double exp = GetExposure();
    if (sequenceRunning_ && IsCapturing()) 
@@ -380,7 +402,15 @@ int CDemoCamera::SnapImage()
 
    if (!fastImage_)
    {
+     if(response.success) {
+       
+       MMThreadGuard g(imgPixelsLock_);
+       unsigned char* pBuf = const_cast<unsigned char*>(img_.GetPixels());
+       memcpy(pBuf, response.body.c_str(), img_.Height()*img_.Width()*img_.Depth());
+       
+     } else {
       GenerateSyntheticImage(img_, exp);
+     }
    }
 
    MM::MMTime s0(0,0);
@@ -800,7 +830,46 @@ int CDemoCamera::RunSequenceOnThread(MM::MMTime startTime)
 
    if (!fastImage_)
    {
+  
+     
+     
+     
+     /************************************/
+     
+     
+      double x, y, z;
+   
+   GetCoreCallback()->GetXYPosition(x, y);
+   GetCoreCallback()->GetFocusPosition(z);
+   
+   // This works ... properly fetches <x,y,z> coordinates
+      
+   URI theUri(URL);
+   
+   theUri.querystring = string("width=") + CDeviceUtils::ConvertToString((int)img_.Width()) + "&" 
+    "height=" + CDeviceUtils::ConvertToString((int)img_.Height()) + "&"
+    "depth=" + CDeviceUtils::ConvertToString((int)img_.Depth()) + "&" 
+    "x=" + CDeviceUtils::ConvertToString(x) + "&" 
+    "y=" + CDeviceUtils::ConvertToString(y) + "&" 
+    "z=" + CDeviceUtils::ConvertToString(z); 
+
+   HTTPResponse response = HTTPClient::request(HTTPClient::GET, theUri);
+   
+     if(response.success) {
+       
+       MMThreadGuard g(imgPixelsLock_);
+       unsigned char* pBuf = const_cast<unsigned char*>(img_.GetPixels());
+       memcpy(pBuf, response.body.c_str(), img_.Height()*img_.Width()*img_.Depth());
+       
+     } else {
       GenerateSyntheticImage(img_, exposure);
+      
+     }
+     
+     /***
+     
+     
+      GenerateSyntheticImage(img_, exposure);***/
    }
 
    // Simulate exposure duration
@@ -920,6 +989,21 @@ int MySequenceThread::svc(void) throw()
 ///////////////////////////////////////////////////////////////////////////////
 // CDemoCamera Action handlers
 ///////////////////////////////////////////////////////////////////////////////
+
+
+
+int CDemoCamera::OnURL(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+      pProp->Set(URL.c_str());
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      pProp->Get(URL);
+   }
+   return DEVICE_OK;
+}
 
 int CDemoCamera::OnMaxExposure(MM::PropertyBase* pProp, MM::ActionType eAct)
 {

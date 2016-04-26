@@ -75,8 +75,10 @@ public:
 
    // action interface
    // ----------------
+   int OnURL(MM::PropertyBase* pProp, MM::ActionType eAct);
+
    int OnMaxExposure(MM::PropertyBase* pProp, MM::ActionType eAct);
-	int OnTestProperty(MM::PropertyBase* pProp, MM::ActionType eAct, long);
+   int OnTestProperty(MM::PropertyBase* pProp, MM::ActionType eAct, long);
    int OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnPixelType(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnBitDepth(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -112,6 +114,8 @@ private:
 
    static const double nominalPixelSizeUm_;
 
+   std::string URL;
+   
    double exposureMaximum_;
    double dPhase_;
    ImgBuffer img_;
