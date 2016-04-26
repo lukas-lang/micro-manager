@@ -18,11 +18,11 @@
 #include <sstream>
 #include <algorithm>
 #include <iostream>
-
+#include "picohttpclient.hpp"
 
 
 using namespace std;
-const double CDemoCamera::nominalPixelSizeUm_ = 1.0;
+const double CSimulatingCamera::nominalPixelSizeUm_ = 1.0;
 double g_IntensityFactor_ = 1.0;
 
 // External names used used by the rest of the system
@@ -60,7 +60,7 @@ MODULE_API MM::Device* CreateDevice(const char* deviceName)
    if (strcmp(deviceName, g_CameraDeviceName) == 0)
    {
       // create camera
-      return new CDemoCamera();
+      return new CSimulatingCamera();
    }
 
    else if(strcmp(deviceName, "TestProcessor") == 0)
@@ -78,8 +78,8 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
 }
 
 
-CDemoCamera::CDemoCamera() :
-   CCameraBase<CDemoCamera> (),
+CSimulatingCamera::CSimulatingCamera() :
+   CCameraBase<CSimulatingCamera> (),
    exposureMaximum_(10000.0),
    dPhase_(0),
    initialized_(false),
@@ -120,25 +120,25 @@ CDemoCamera::CDemoCamera() :
    CreateHubIDProperty();
 
    CreateFloatProperty("MaximumExposureMs", exposureMaximum_, false,
-         new CPropertyAction(this, &CDemoCamera::OnMaxExposure),
+         new CPropertyAction(this, &CSimulatingCamera::OnMaxExposure),
          true);
 }
 
-CDemoCamera::~CDemoCamera()
+CSimulatingCamera::~CSimulatingCamera()
 {
    StopSequenceAcquisition();
    delete thd_;
 }
 
 
-void CDemoCamera::GetName(char* name) const
+void CSimulatingCamera::GetName(char* name) const
 {
    // Return the name used to referr to this device adapte
    CDeviceUtils::CopyLimitedString(name, g_CameraDeviceName);
 }
 
 
-int CDemoCamera::Initialize()
+int CSimulatingCamera::Initialize()
 {
    if (initialized_)
       return DEVICE_OK;
@@ -170,7 +170,7 @@ int CDemoCamera::Initialize()
 
 
    // binning
-   CPropertyAction *pAct = new CPropertyAction (this, &CDemoCamera::OnBinning);
+   CPropertyAction *pAct = new CPropertyAction (this, &CSimulatingCamera::OnBinning);
    nRet = CreateIntegerProperty(MM::g_Keyword_Binning, 1, false, pAct);
    assert(nRet == DEVICE_OK);
 
@@ -178,12 +178,16 @@ int CDemoCamera::Initialize()
    if (nRet != DEVICE_OK)
       return nRet;
    
-   pAct = new CPropertyAction (this, &CDemoCamera::OnURL);
+   pAct = new CPropertyAction (this, &CSimulatingCamera::OnURL);
    nRet = CreateProperty("URL", "http://localhost:8888/", MM::String, false, pAct, false); 
+   assert(nRet == DEVICE_OK);
+   
+   pAct = new CPropertyAction (this, &CSimulatingCamera::OnChannelDevice);
+   nRet = CreateProperty("ChannelDevice", "DWheel", MM::String, false, pAct, false); 
    assert(nRet == DEVICE_OK);
 
    // pixel type
-   pAct = new CPropertyAction (this, &CDemoCamera::OnPixelType);
+   pAct = new CPropertyAction (this, &CSimulatingCamera::OnPixelType);
    nRet = CreateStringProperty(MM::g_Keyword_PixelType, g_PixelType_8bit, false, pAct);
    assert(nRet == DEVICE_OK);
 
@@ -199,7 +203,7 @@ int CDemoCamera::Initialize()
       return nRet;
 
    // Bit depth
-   pAct = new CPropertyAction (this, &CDemoCamera::OnBitDepth);
+   pAct = new CPropertyAction (this, &CSimulatingCamera::OnBitDepth);
    nRet = CreateIntegerProperty("BitDepth", 8, false, pAct);
    assert(nRet == DEVICE_OK);
 
@@ -214,15 +218,17 @@ int CDemoCamera::Initialize()
    if (nRet != DEVICE_OK)
       return nRet;
 
+   /*
+   
    // exposure
    nRet = CreateFloatProperty(MM::g_Keyword_Exposure, 10.0, false);
    assert(nRet == DEVICE_OK);
    SetPropertyLimits(MM::g_Keyword_Exposure, 0.0, exposureMaximum_);
  
-
+    
    
    // scan mode
-   pAct = new CPropertyAction (this, &CDemoCamera::OnScanMode);
+   pAct = new CPropertyAction (this, &CSimulatingCamera::OnScanMode);
    nRet = CreateIntegerProperty("ScanMode", 1, false, pAct);
    assert(nRet == DEVICE_OK);
    AddAllowedValue("ScanMode","1");
@@ -239,85 +245,91 @@ int CDemoCamera::Initialize()
    assert(nRet == DEVICE_OK);
 
    // camera temperature
-   pAct = new CPropertyAction (this, &CDemoCamera::OnCCDTemp);
+   pAct = new CPropertyAction (this, &CSimulatingCamera::OnCCDTemp);
    nRet = CreateFloatProperty(MM::g_Keyword_CCDTemperature, 0, false, pAct);
    assert(nRet == DEVICE_OK);
    SetPropertyLimits(MM::g_Keyword_CCDTemperature, -100, 10);
 
    // camera temperature RO
-   pAct = new CPropertyAction (this, &CDemoCamera::OnCCDTemp);
+   pAct = new CPropertyAction (this, &CSimulatingCamera::OnCCDTemp);
    nRet = CreateFloatProperty("CCDTemperature RO", 0, true, pAct);
    assert(nRet == DEVICE_OK);
 
    // readout time
-   pAct = new CPropertyAction (this, &CDemoCamera::OnReadoutTime);
+   pAct = new CPropertyAction (this, &CSimulatingCamera::OnReadoutTime);
    nRet = CreateFloatProperty(MM::g_Keyword_ReadoutTime, 0, false, pAct);
    assert(nRet == DEVICE_OK);
 
+   */
+   
    // CCD size of the camera we are modeling
-   pAct = new CPropertyAction (this, &CDemoCamera::OnCameraCCDXSize);
+   pAct = new CPropertyAction (this, &CSimulatingCamera::OnCameraCCDXSize);
    CreateIntegerProperty("OnCameraCCDXSize", 512, false, pAct);
-   pAct = new CPropertyAction (this, &CDemoCamera::OnCameraCCDYSize);
+   pAct = new CPropertyAction (this, &CSimulatingCamera::OnCameraCCDYSize);
    CreateIntegerProperty("OnCameraCCDYSize", 512, false, pAct);
-
+   
+   /*
+   
    // Trigger device
-   pAct = new CPropertyAction (this, &CDemoCamera::OnTriggerDevice);
+   pAct = new CPropertyAction (this, &CSimulatingCamera::OnTriggerDevice);
    CreateStringProperty("TriggerDevice", "", false, pAct);
 
-   pAct = new CPropertyAction (this, &CDemoCamera::OnDropPixels);
+   pAct = new CPropertyAction (this, &CSimulatingCamera::OnDropPixels);
    CreateIntegerProperty("DropPixels", 0, false, pAct);
    AddAllowedValue("DropPixels", "0");
    AddAllowedValue("DropPixels", "1");
 
-   pAct = new CPropertyAction (this, &CDemoCamera::OnSaturatePixels);
+   pAct = new CPropertyAction (this, &CSimulatingCamera::OnSaturatePixels);
    CreateIntegerProperty("SaturatePixels", 0, false, pAct);
    AddAllowedValue("SaturatePixels", "0");
    AddAllowedValue("SaturatePixels", "1");
 
-   pAct = new CPropertyAction (this, &CDemoCamera::OnFastImage);
+   pAct = new CPropertyAction (this, &CSimulatingCamera::OnFastImage);
    CreateIntegerProperty("FastImage", 0, false, pAct);
    AddAllowedValue("FastImage", "0");
    AddAllowedValue("FastImage", "1");
 
-   pAct = new CPropertyAction (this, &CDemoCamera::OnFractionOfPixelsToDropOrSaturate);
+   pAct = new CPropertyAction (this, &CSimulatingCamera::OnFractionOfPixelsToDropOrSaturate);
    CreateFloatProperty("FractionOfPixelsToDropOrSaturate", 0.002, false, pAct);
    SetPropertyLimits("FractionOfPixelsToDropOrSaturate", 0., 0.1);
 
-   pAct = new CPropertyAction(this, &CDemoCamera::OnShouldRotateImages);
+   pAct = new CPropertyAction(this, &CSimulatingCamera::OnShouldRotateImages);
    CreateIntegerProperty("RotateImages", 0, false, pAct);
    AddAllowedValue("RotateImages", "0");
    AddAllowedValue("RotateImages", "1");
 
-   pAct = new CPropertyAction(this, &CDemoCamera::OnShouldDisplayImageNumber);
+   pAct = new CPropertyAction(this, &CSimulatingCamera::OnShouldDisplayImageNumber);
    CreateIntegerProperty("DisplayImageNumber", 0, false, pAct);
    AddAllowedValue("DisplayImageNumber", "0");
    AddAllowedValue("DisplayImageNumber", "1");
 
-   pAct = new CPropertyAction(this, &CDemoCamera::OnStripeWidth);
+   pAct = new CPropertyAction(this, &CSimulatingCamera::OnStripeWidth);
    CreateFloatProperty("StripeWidth", 0, false, pAct);
    SetPropertyLimits("StripeWidth", 0, 10);
 
    // Whether or not to use exposure time sequencing
-   pAct = new CPropertyAction (this, &CDemoCamera::OnIsSequenceable);
+   pAct = new CPropertyAction (this, &CSimulatingCamera::OnIsSequenceable);
    std::string propName = "UseExposureSequences";
    CreateStringProperty(propName.c_str(), "No", false, pAct);
    AddAllowedValue(propName.c_str(), "Yes");
    AddAllowedValue(propName.c_str(), "No");
 
    // Camera mode: 
-   pAct = new CPropertyAction (this, &CDemoCamera::OnMode);
+   pAct = new CPropertyAction (this, &CSimulatingCamera::OnMode);
    propName = "Mode";
    CreateStringProperty(propName.c_str(), g_Sine_Wave, false, pAct);
    AddAllowedValue(propName.c_str(), g_Sine_Wave);
    AddAllowedValue(propName.c_str(), g_Norm_Noise);
 
    // Simulate application crash
-   pAct = new CPropertyAction(this, &CDemoCamera::OnCrash);
+   pAct = new CPropertyAction(this, &CSimulatingCamera::OnCrash);
    CreateStringProperty("SimulateCrash", "", false, pAct);
    AddAllowedValue("SimulateCrash", "");
    AddAllowedValue("SimulateCrash", "Dereference Null Pointer");
    AddAllowedValue("SimulateCrash", "Divide by Zero");
 
+    */
+   
    // synchronize all properties
    // --------------------------
    nRet = UpdateStatus();
@@ -330,11 +342,6 @@ int CDemoCamera::Initialize()
    nRet = ResizeImageBuffer();
    if (nRet != DEVICE_OK)
       return nRet;
-
-#ifdef TESTRESOURCELOCKING
-   TestResourceLocking(true);
-   LogMessage("TestResourceLocking OK",true);
-#endif
 
 
    initialized_ = true;
@@ -354,14 +361,11 @@ int CDemoCamera::Initialize()
 * After Shutdown() we should be allowed to call Initialize() again to load the device
 * without causing problems.
 */
-int CDemoCamera::Shutdown()
+int CSimulatingCamera::Shutdown()
 {
    initialized_ = false;
    return DEVICE_OK;
 }
-
-
-#include "picohttpclient.hpp"
 
 /**
 * Performs exposure and grabs a single image.
@@ -369,29 +373,10 @@ int CDemoCamera::Shutdown()
 * (i.e., before readout).  This behavior is needed for proper synchronization with the shutter.
 * Required by the MM::Camera API.
 */
-int CDemoCamera::SnapImage()
+int CSimulatingCamera::SnapImage()
 {
    static int callCounter = 0;
    ++callCounter;
-   
-   
-   double x, y, z;
-   
-   GetCoreCallback()->GetXYPosition(x, y);
-   GetCoreCallback()->GetFocusPosition(z);
-   
-   // This works ... properly fetches <x,y,z> coordinates
-      
-   URI theUri(URL);
-   
-   theUri.querystring = string("width=") + CDeviceUtils::ConvertToString((int)img_.Width()) + "&" 
-    "height=" + CDeviceUtils::ConvertToString((int)img_.Height()) + "&"
-    "depth=" + CDeviceUtils::ConvertToString((int)img_.Depth()) + "&" 
-    "x=" + CDeviceUtils::ConvertToString(x) + "&" 
-    "y=" + CDeviceUtils::ConvertToString(y) + "&" 
-    "z=" + CDeviceUtils::ConvertToString(z); 
-
-   HTTPResponse response = HTTPClient::request(HTTPClient::GET, theUri);
    
    MM::MMTime startTime = GetCurrentMMTime();
    double exp = GetExposure();
@@ -402,13 +387,7 @@ int CDemoCamera::SnapImage()
 
    if (!fastImage_)
    {
-     if(response.success) {
-       
-       MMThreadGuard g(imgPixelsLock_);
-       unsigned char* pBuf = const_cast<unsigned char*>(img_.GetPixels());
-       memcpy(pBuf, response.body.c_str(), img_.Height()*img_.Width()*img_.Depth());
-       
-     } else {
+     if(!FetchImageFromUrl(img_)) {
       GenerateSyntheticImage(img_, exp);
      }
    }
@@ -444,7 +423,7 @@ int CDemoCamera::SnapImage()
 * the pixel buffer on its own. In other words, the buffer can change only if
 * appropriate properties are set (such as binning, pixel type, etc.)
 */
-const unsigned char* CDemoCamera::GetImageBuffer()
+const unsigned char* CSimulatingCamera::GetImageBuffer()
 {
    MMThreadGuard g(imgPixelsLock_);
    MM::MMTime readoutTime(readoutUs_);
@@ -457,7 +436,7 @@ const unsigned char* CDemoCamera::GetImageBuffer()
 * Returns image buffer X-size in pixels.
 * Required by the MM::Camera API.
 */
-unsigned CDemoCamera::GetImageWidth() const
+unsigned CSimulatingCamera::GetImageWidth() const
 {
    return img_.Width();
 }
@@ -466,7 +445,7 @@ unsigned CDemoCamera::GetImageWidth() const
 * Returns image buffer Y-size in pixels.
 * Required by the MM::Camera API.
 */
-unsigned CDemoCamera::GetImageHeight() const
+unsigned CSimulatingCamera::GetImageHeight() const
 {
    return img_.Height();
 }
@@ -475,7 +454,7 @@ unsigned CDemoCamera::GetImageHeight() const
 * Returns image buffer pixel depth in bytes.
 * Required by the MM::Camera API.
 */
-unsigned CDemoCamera::GetImageBytesPerPixel() const
+unsigned CSimulatingCamera::GetImageBytesPerPixel() const
 {
    return img_.Depth();
 } 
@@ -486,7 +465,7 @@ unsigned CDemoCamera::GetImageBytesPerPixel() const
 * a guideline on how to interpret pixel values.
 * Required by the MM::Camera API.
 */
-unsigned CDemoCamera::GetBitDepth() const
+unsigned CSimulatingCamera::GetBitDepth() const
 {
    return bitDepth_;
 }
@@ -495,7 +474,7 @@ unsigned CDemoCamera::GetBitDepth() const
 * Returns the size in bytes of the image buffer.
 * Required by the MM::Camera API.
 */
-long CDemoCamera::GetImageBufferSize() const
+long CSimulatingCamera::GetImageBufferSize() const
 {
    return img_.Width() * img_.Height() * GetImageBytesPerPixel();
 }
@@ -514,7 +493,7 @@ long CDemoCamera::GetImageBufferSize() const
 * @param xSize - width
 * @param ySize - height
 */
-int CDemoCamera::SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize)
+int CSimulatingCamera::SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize)
 {
    if (xSize == 0 && ySize == 0)
    {
@@ -537,7 +516,7 @@ int CDemoCamera::SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize)
 * Returns the actual dimensions of the current ROI.
 * Required by the MM::Camera API.
 */
-int CDemoCamera::GetROI(unsigned& x, unsigned& y, unsigned& xSize, unsigned& ySize)
+int CSimulatingCamera::GetROI(unsigned& x, unsigned& y, unsigned& xSize, unsigned& ySize)
 {
    x = roiX_;
    y = roiY_;
@@ -552,7 +531,7 @@ int CDemoCamera::GetROI(unsigned& x, unsigned& y, unsigned& xSize, unsigned& ySi
 * Resets the Region of Interest to full frame.
 * Required by the MM::Camera API.
 */
-int CDemoCamera::ClearROI()
+int CSimulatingCamera::ClearROI()
 {
    ResizeImageBuffer();
    roiX_ = 0;
@@ -565,7 +544,7 @@ int CDemoCamera::ClearROI()
 * Returns the current exposure setting in milliseconds.
 * Required by the MM::Camera API.
 */
-double CDemoCamera::GetExposure() const
+double CSimulatingCamera::GetExposure() const
 {
    char buf[MM::MaxStrLength];
    int ret = GetProperty(MM::g_Keyword_Exposure, buf);
@@ -578,7 +557,7 @@ double CDemoCamera::GetExposure() const
  * Returns the current exposure from a sequence and increases the sequence counter
  * Used for exposure sequences
  */
-double CDemoCamera::GetSequenceExposure() 
+double CSimulatingCamera::GetSequenceExposure() 
 {
    if (exposureSequence_.size() == 0) 
       return this->GetExposure();
@@ -596,7 +575,7 @@ double CDemoCamera::GetSequenceExposure()
 * Sets exposure in milliseconds.
 * Required by the MM::Camera API.
 */
-void CDemoCamera::SetExposure(double exp)
+void CSimulatingCamera::SetExposure(double exp)
 {
    SetProperty(MM::g_Keyword_Exposure, CDeviceUtils::ConvertToString(exp));
    GetCoreCallback()->OnExposureChanged(this, exp);;
@@ -606,7 +585,7 @@ void CDemoCamera::SetExposure(double exp)
 * Returns the current binning factor.
 * Required by the MM::Camera API.
 */
-int CDemoCamera::GetBinning() const
+int CSimulatingCamera::GetBinning() const
 {
    char buf[MM::MaxStrLength];
    int ret = GetProperty(MM::g_Keyword_Binning, buf);
@@ -619,18 +598,18 @@ int CDemoCamera::GetBinning() const
 * Sets binning factor.
 * Required by the MM::Camera API.
 */
-int CDemoCamera::SetBinning(int binF)
+int CSimulatingCamera::SetBinning(int binF)
 {
    return SetProperty(MM::g_Keyword_Binning, CDeviceUtils::ConvertToString(binF));
 }
 
-int CDemoCamera::IsExposureSequenceable(bool& isSequenceable) const
+int CSimulatingCamera::IsExposureSequenceable(bool& isSequenceable) const
 {
    isSequenceable = false; //isSequenceable_;
    return DEVICE_OK;
 }
 
-int CDemoCamera::GetExposureSequenceMaxLength(long& nrEvents) const
+int CSimulatingCamera::GetExposureSequenceMaxLength(long& nrEvents) const
 {
    if (!isSequenceable_) {
       return DEVICE_UNSUPPORTED_COMMAND;
@@ -640,7 +619,7 @@ int CDemoCamera::GetExposureSequenceMaxLength(long& nrEvents) const
    return DEVICE_OK;
 }
 
-int CDemoCamera::StartExposureSequence()
+int CSimulatingCamera::StartExposureSequence()
 {
    if (!isSequenceable_) {
       return DEVICE_UNSUPPORTED_COMMAND;
@@ -651,7 +630,7 @@ int CDemoCamera::StartExposureSequence()
    return DEVICE_OK;
 }
 
-int CDemoCamera::StopExposureSequence()
+int CSimulatingCamera::StopExposureSequence()
 {
    if (!isSequenceable_) {
       return DEVICE_UNSUPPORTED_COMMAND;
@@ -666,7 +645,7 @@ int CDemoCamera::StopExposureSequence()
 /**
  * Clears the list of exposures used in sequences
  */
-int CDemoCamera::ClearExposureSequence()
+int CSimulatingCamera::ClearExposureSequence()
 {
    if (!isSequenceable_) {
       return DEVICE_UNSUPPORTED_COMMAND;
@@ -679,7 +658,7 @@ int CDemoCamera::ClearExposureSequence()
 /**
  * Adds an exposure to a list of exposures used in sequences
  */
-int CDemoCamera::AddToExposureSequence(double exposureTime_ms) 
+int CSimulatingCamera::AddToExposureSequence(double exposureTime_ms) 
 {
    if (!isSequenceable_) {
       return DEVICE_UNSUPPORTED_COMMAND;
@@ -689,7 +668,7 @@ int CDemoCamera::AddToExposureSequence(double exposureTime_ms)
    return DEVICE_OK;
 }
 
-int CDemoCamera::SendExposureSequence() const {
+int CSimulatingCamera::SendExposureSequence() const {
    if (!isSequenceable_) {
       return DEVICE_UNSUPPORTED_COMMAND;
    }
@@ -697,7 +676,7 @@ int CDemoCamera::SendExposureSequence() const {
    return DEVICE_OK;
 }
 
-int CDemoCamera::SetAllowedBinning() 
+int CSimulatingCamera::SetAllowedBinning() 
 {
    vector<string> binValues;
    binValues.push_back("1");
@@ -724,7 +703,7 @@ int CDemoCamera::SetAllowedBinning()
  * Please implement this yourself and do not rely on the base class implementation
  * The Base class implementation is deprecated and will be removed shortly
  */
-int CDemoCamera::StartSequenceAcquisition(double interval)
+int CSimulatingCamera::StartSequenceAcquisition(double interval)
 {
    return StartSequenceAcquisition(LONG_MAX, interval, false);            
 }
@@ -732,7 +711,7 @@ int CDemoCamera::StartSequenceAcquisition(double interval)
 /**                                                                       
 * Stop and wait for the Sequence thread finished                                   
 */                                                                        
-int CDemoCamera::StopSequenceAcquisition()                                     
+int CSimulatingCamera::StopSequenceAcquisition()                                     
 {
    if (!thd_->IsStopped()) {
       thd_->Stop();                                                       
@@ -747,7 +726,7 @@ int CDemoCamera::StopSequenceAcquisition()
 * A sequence acquisition should run on its own thread and transport new images
 * coming of the camera into the MMCore circular buffer.
 */
-int CDemoCamera::StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow)
+int CSimulatingCamera::StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow)
 {
    if (IsCapturing())
       return DEVICE_CAMERA_BUSY_ACQUIRING;
@@ -766,7 +745,7 @@ int CDemoCamera::StartSequenceAcquisition(long numImages, double interval_ms, bo
 /*
  * Inserts Image and MetaData into MMCore circular Buffer
  */
-int CDemoCamera::InsertImage()
+int CSimulatingCamera::InsertImage()
 {
    MM::MMTime timeStamp = this->GetCurrentMMTime();
    char label[MM::MaxStrLength];
@@ -813,7 +792,7 @@ int CDemoCamera::InsertImage()
  * Do actual capturing
  * Called from inside the thread  
  */
-int CDemoCamera::RunSequenceOnThread(MM::MMTime startTime)
+int CSimulatingCamera::RunSequenceOnThread(MM::MMTime startTime)
 {
    int ret=DEVICE_ERR;
    
@@ -830,46 +809,10 @@ int CDemoCamera::RunSequenceOnThread(MM::MMTime startTime)
 
    if (!fastImage_)
    {
-  
-     
-     
-     
-     /************************************/
-     
-     
-      double x, y, z;
-   
-   GetCoreCallback()->GetXYPosition(x, y);
-   GetCoreCallback()->GetFocusPosition(z);
-   
-   // This works ... properly fetches <x,y,z> coordinates
-      
-   URI theUri(URL);
-   
-   theUri.querystring = string("width=") + CDeviceUtils::ConvertToString((int)img_.Width()) + "&" 
-    "height=" + CDeviceUtils::ConvertToString((int)img_.Height()) + "&"
-    "depth=" + CDeviceUtils::ConvertToString((int)img_.Depth()) + "&" 
-    "x=" + CDeviceUtils::ConvertToString(x) + "&" 
-    "y=" + CDeviceUtils::ConvertToString(y) + "&" 
-    "z=" + CDeviceUtils::ConvertToString(z); 
-
-   HTTPResponse response = HTTPClient::request(HTTPClient::GET, theUri);
-   
-     if(response.success) {
-       
-       MMThreadGuard g(imgPixelsLock_);
-       unsigned char* pBuf = const_cast<unsigned char*>(img_.GetPixels());
-       memcpy(pBuf, response.body.c_str(), img_.Height()*img_.Width()*img_.Depth());
-       
-     } else {
-      GenerateSyntheticImage(img_, exposure);
-      
+     if(!FetchImageFromUrl(img_))
+     {
+        GenerateSyntheticImage(img_, exposure);
      }
-     
-     /***
-     
-     
-      GenerateSyntheticImage(img_, exposure);***/
    }
 
    // Simulate exposure duration
@@ -888,7 +831,7 @@ int CDemoCamera::RunSequenceOnThread(MM::MMTime startTime)
    return ret;
 };
 
-bool CDemoCamera::IsCapturing() {
+bool CSimulatingCamera::IsCapturing() {
   return !thd_->IsStopped();
   //return false;
 }
@@ -896,7 +839,7 @@ bool CDemoCamera::IsCapturing() {
 /*
  * called from the thread function before exit 
  */
-void CDemoCamera::OnThreadExiting() throw()
+void CSimulatingCamera::OnThreadExiting() throw()
 {
    try
    {
@@ -910,7 +853,7 @@ void CDemoCamera::OnThreadExiting() throw()
 }
 
 
-MySequenceThread::MySequenceThread(CDemoCamera* pCam)
+MySequenceThread::MySequenceThread(CSimulatingCamera* pCam)
    :intervalMs_(default_intervalMS)
    ,numImages_(default_numImages)
    ,imageCounter_(0)
@@ -987,12 +930,12 @@ int MySequenceThread::svc(void) throw()
 
 
 ///////////////////////////////////////////////////////////////////////////////
-// CDemoCamera Action handlers
+// CSimulatingCamera Action handlers
 ///////////////////////////////////////////////////////////////////////////////
 
 
 
-int CDemoCamera::OnURL(MM::PropertyBase* pProp, MM::ActionType eAct)
+int CSimulatingCamera::OnURL(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
    {
@@ -1005,7 +948,21 @@ int CDemoCamera::OnURL(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
-int CDemoCamera::OnMaxExposure(MM::PropertyBase* pProp, MM::ActionType eAct)
+int CSimulatingCamera::OnChannelDevice(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+      pProp->Set(channelDevice.c_str());
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      pProp->Get(channelDevice);
+   }
+   return DEVICE_OK;
+}
+
+
+int CSimulatingCamera::OnMaxExposure(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
    {
@@ -1023,7 +980,7 @@ int CDemoCamera::OnMaxExposure(MM::PropertyBase* pProp, MM::ActionType eAct)
 * this Read Only property will update whenever any property is modified
 */
 
-int CDemoCamera::OnTestProperty(MM::PropertyBase* pProp, MM::ActionType eAct, long indexx)
+int CSimulatingCamera::OnTestProperty(MM::PropertyBase* pProp, MM::ActionType eAct, long indexx)
 {
    if (eAct == MM::BeforeGet)
    {
@@ -1041,7 +998,7 @@ int CDemoCamera::OnTestProperty(MM::PropertyBase* pProp, MM::ActionType eAct, lo
 /**
 * Handles "Binning" property.
 */
-int CDemoCamera::OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct)
+int CSimulatingCamera::OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    int ret = DEVICE_ERR;
    switch(eAct)
@@ -1083,7 +1040,7 @@ int CDemoCamera::OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct)
 /**
 * Handles "PixelType" property.
 */
-int CDemoCamera::OnPixelType(MM::PropertyBase* pProp, MM::ActionType eAct)
+int CSimulatingCamera::OnPixelType(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    int ret = DEVICE_ERR;
    switch(eAct)
@@ -1183,7 +1140,7 @@ int CDemoCamera::OnPixelType(MM::PropertyBase* pProp, MM::ActionType eAct)
 /**
 * Handles "BitDepth" property.
 */
-int CDemoCamera::OnBitDepth(MM::PropertyBase* pProp, MM::ActionType eAct)
+int CSimulatingCamera::OnBitDepth(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    int ret = DEVICE_ERR;
    switch(eAct)
@@ -1294,7 +1251,7 @@ int CDemoCamera::OnBitDepth(MM::PropertyBase* pProp, MM::ActionType eAct)
 /**
 * Handles "ReadoutTime" property.
 */
-int CDemoCamera::OnReadoutTime(MM::PropertyBase* pProp, MM::ActionType eAct)
+int CSimulatingCamera::OnReadoutTime(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::AfterSet)
    {
@@ -1311,7 +1268,7 @@ int CDemoCamera::OnReadoutTime(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
-int CDemoCamera::OnDropPixels(MM::PropertyBase* pProp, MM::ActionType eAct)
+int CSimulatingCamera::OnDropPixels(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::AfterSet)
    {
@@ -1327,7 +1284,7 @@ int CDemoCamera::OnDropPixels(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
-int CDemoCamera::OnFastImage(MM::PropertyBase* pProp, MM::ActionType eAct)
+int CSimulatingCamera::OnFastImage(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::AfterSet)
    {
@@ -1343,7 +1300,7 @@ int CDemoCamera::OnFastImage(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
-int CDemoCamera::OnSaturatePixels(MM::PropertyBase* pProp, MM::ActionType eAct)
+int CSimulatingCamera::OnSaturatePixels(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::AfterSet)
    {
@@ -1359,7 +1316,7 @@ int CDemoCamera::OnSaturatePixels(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
-int CDemoCamera::OnFractionOfPixelsToDropOrSaturate(MM::PropertyBase* pProp, MM::ActionType eAct)
+int CSimulatingCamera::OnFractionOfPixelsToDropOrSaturate(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::AfterSet)
    {
@@ -1375,7 +1332,7 @@ int CDemoCamera::OnFractionOfPixelsToDropOrSaturate(MM::PropertyBase* pProp, MM:
    return DEVICE_OK;
 }
 
-int CDemoCamera::OnShouldRotateImages(MM::PropertyBase* pProp, MM::ActionType eAct)
+int CSimulatingCamera::OnShouldRotateImages(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::AfterSet)
    {
@@ -1391,7 +1348,7 @@ int CDemoCamera::OnShouldRotateImages(MM::PropertyBase* pProp, MM::ActionType eA
    return DEVICE_OK;
 }
 
-int CDemoCamera::OnShouldDisplayImageNumber(MM::PropertyBase* pProp, MM::ActionType eAct)
+int CSimulatingCamera::OnShouldDisplayImageNumber(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::AfterSet)
    {
@@ -1407,7 +1364,7 @@ int CDemoCamera::OnShouldDisplayImageNumber(MM::PropertyBase* pProp, MM::ActionT
    return DEVICE_OK;
 }
 
-int CDemoCamera::OnStripeWidth(MM::PropertyBase* pProp, MM::ActionType eAct)
+int CSimulatingCamera::OnStripeWidth(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::AfterSet)
    {
@@ -1424,7 +1381,7 @@ int CDemoCamera::OnStripeWidth(MM::PropertyBase* pProp, MM::ActionType eAct)
 * Handles "ScanMode" property.
 * Changes allowed Binning values to test whether the UI updates properly
 */
-int CDemoCamera::OnScanMode(MM::PropertyBase* pProp, MM::ActionType eAct)
+int CSimulatingCamera::OnScanMode(MM::PropertyBase* pProp, MM::ActionType eAct)
 { 
    if (eAct == MM::AfterSet) {
       pProp->Get(scanMode_);
@@ -1444,7 +1401,7 @@ int CDemoCamera::OnScanMode(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 
 
-int CDemoCamera::OnCameraCCDXSize(MM::PropertyBase* pProp , MM::ActionType eAct)
+int CSimulatingCamera::OnCameraCCDXSize(MM::PropertyBase* pProp , MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
    {
@@ -1466,7 +1423,7 @@ int CDemoCamera::OnCameraCCDXSize(MM::PropertyBase* pProp , MM::ActionType eAct)
 
 }
 
-int CDemoCamera::OnCameraCCDYSize(MM::PropertyBase* pProp, MM::ActionType eAct)
+int CSimulatingCamera::OnCameraCCDYSize(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
    {
@@ -1488,7 +1445,7 @@ int CDemoCamera::OnCameraCCDYSize(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 }
 
-int CDemoCamera::OnTriggerDevice(MM::PropertyBase* pProp, MM::ActionType eAct)
+int CSimulatingCamera::OnTriggerDevice(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
    {
@@ -1502,7 +1459,7 @@ int CDemoCamera::OnTriggerDevice(MM::PropertyBase* pProp, MM::ActionType eAct)
 }
 
 
-int CDemoCamera::OnCCDTemp(MM::PropertyBase* pProp, MM::ActionType eAct)
+int CSimulatingCamera::OnCCDTemp(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
    {
@@ -1515,7 +1472,7 @@ int CDemoCamera::OnCCDTemp(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
-int CDemoCamera::OnIsSequenceable(MM::PropertyBase* pProp, MM::ActionType eAct)
+int CSimulatingCamera::OnIsSequenceable(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    std::string val = "Yes";
    if (eAct == MM::BeforeGet)
@@ -1540,7 +1497,7 @@ int CDemoCamera::OnIsSequenceable(MM::PropertyBase* pProp, MM::ActionType eAct)
 }
 
 
-int CDemoCamera::OnMode(MM::PropertyBase* pProp, MM::ActionType eAct)
+int CSimulatingCamera::OnMode(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    std::string val;
    if (eAct == MM::BeforeGet)
@@ -1569,7 +1526,7 @@ int CDemoCamera::OnMode(MM::PropertyBase* pProp, MM::ActionType eAct)
 }
 
 
-int CDemoCamera::OnCrash(MM::PropertyBase* pProp, MM::ActionType eAct)
+int CSimulatingCamera::OnCrash(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    AddAllowedValue("SimulateCrash", "");
    AddAllowedValue("SimulateCrash", "Dereference Null Pointer");
@@ -1597,13 +1554,13 @@ int CDemoCamera::OnCrash(MM::PropertyBase* pProp, MM::ActionType eAct)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// Private CDemoCamera methods
+// Private CSimulatingCamera methods
 ///////////////////////////////////////////////////////////////////////////////
 
 /**
 * Sync internal image buffer size to the chosen property values.
 */
-int CDemoCamera::ResizeImageBuffer()
+int CSimulatingCamera::ResizeImageBuffer()
 {
    char buf[MM::MaxStrLength];
    //int ret = GetProperty(MM::g_Keyword_Binning, buf);
@@ -1643,13 +1600,57 @@ int CDemoCamera::ResizeImageBuffer()
    return DEVICE_OK;
 }
 
-void CDemoCamera::GenerateEmptyImage(ImgBuffer& img)
+void CSimulatingCamera::GenerateEmptyImage(ImgBuffer& img)
 {
    MMThreadGuard g(imgPixelsLock_);
    if (img.Height() == 0 || img.Width() == 0 || img.Depth() == 0)
       return;
    unsigned char* pBuf = const_cast<unsigned char*>(img.GetPixels());
    memset(pBuf, 0, img.Height()*img.Width()*img.Depth());
+}
+
+inline long min(long a, long b) {
+    return (a < b) ? a : b;
+}
+
+bool CSimulatingCamera::FetchImageFromUrl(ImgBuffer& img)
+{ 
+   double x, y, z;
+   
+   GetCoreCallback()->GetXYPosition(x, y);
+   GetCoreCallback()->GetFocusPosition(z);
+   
+   long channel = 0;
+   // I'd love to avoid "GetStateDevice"; but the device-agnostic API does not seem
+   // to give access to a "get position of a state device" function
+   // (i.e. I need to know the name of the state property)
+   GetCoreCallback()->GetStateDevice(this, channelDevice.c_str())->GetPosition(channel);
+   
+   // This works ... properly fetches <x,y,z> coordinates
+      
+   URI theUri(URL);
+   
+   theUri.querystring = string("width=") + CDeviceUtils::ConvertToString((int)img_.Width()) + "&" 
+    "height=" + CDeviceUtils::ConvertToString((int)img_.Height()) + "&"
+    "depth=" + CDeviceUtils::ConvertToString((int)img_.Depth()) + "&" 
+    "x=" + CDeviceUtils::ConvertToString(x) + "&" 
+    "y=" + CDeviceUtils::ConvertToString(y) + "&" 
+    "z=" + CDeviceUtils::ConvertToString(z) + "&"
+    "channel=" + CDeviceUtils::ConvertToString(channel); 
+    
+
+
+   HTTPResponse response = HTTPClient::request(HTTPClient::GET, theUri);
+   
+   if(response.success) {
+     MMThreadGuard g(imgPixelsLock_);
+     unsigned char* pBuf = const_cast<unsigned char*>(img_.GetPixels());
+     memcpy(pBuf, response.body.c_str(), min(response.body.size(), img_.Height()*img_.Width()*img_.Depth()));
+     return true;
+   } else {
+     return false;
+   }    
+  
 }
 
 
@@ -1661,7 +1662,7 @@ void CDemoCamera::GenerateEmptyImage(ImgBuffer& img)
 * 1. a spatial sine wave.
 * 2. Gaussian noise
 */
-void CDemoCamera::GenerateSyntheticImage(ImgBuffer& img, double exp)
+void CSimulatingCamera::GenerateSyntheticImage(ImgBuffer& img, double exp)
 { 
   
    MMThreadGuard g(imgPixelsLock_);
@@ -1934,7 +1935,7 @@ void CDemoCamera::GenerateSyntheticImage(ImgBuffer& img, double exp)
 }
 
 
-void CDemoCamera::TestResourceLocking(const bool recurse)
+void CSimulatingCamera::TestResourceLocking(const bool recurse)
 {
    if(recurse)
       TestResourceLocking(false);
@@ -1943,7 +1944,7 @@ void CDemoCamera::TestResourceLocking(const bool recurse)
 /**
 * Generate an image with offsetplus noise
 */
-void CDemoCamera::AddBackgroundAndNoise(ImgBuffer& img, double mean, double stdDev)
+void CSimulatingCamera::AddBackgroundAndNoise(ImgBuffer& img, double mean, double stdDev)
 { 
    char buf[MM::MaxStrLength];
    GetProperty(MM::g_Keyword_PixelType, buf);
@@ -1991,7 +1992,7 @@ void CDemoCamera::AddBackgroundAndNoise(ImgBuffer& img, double mean, double stdD
  * Uses Marsaglia polar method to generate Gaussian distributed value.  
  * Then distributes this around mean with the desired std
  */
-double CDemoCamera::GaussDistributedValue(double mean, double std)
+double CSimulatingCamera::GaussDistributedValue(double mean, double std)
 {
    double s = 2;
    double u;

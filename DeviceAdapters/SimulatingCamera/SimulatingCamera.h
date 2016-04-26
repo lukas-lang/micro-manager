@@ -23,11 +23,11 @@
 
 class MySequenceThread;
 
-class CDemoCamera : public CCameraBase<CDemoCamera>  
+class CSimulatingCamera : public CCameraBase<CSimulatingCamera>  
 {
 public:
-   CDemoCamera();
-   ~CDemoCamera();
+   CSimulatingCamera();
+   ~CSimulatingCamera();
   
    // MMDevice API
    // ------------
@@ -76,6 +76,7 @@ public:
    // action interface
    // ----------------
    int OnURL(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnChannelDevice(MM::PropertyBase* pProp, MM::ActionType eAct);
 
    int OnMaxExposure(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnTestProperty(MM::PropertyBase* pProp, MM::ActionType eAct, long);
@@ -108,6 +109,7 @@ public:
 private:
    int SetAllowedBinning();
    void TestResourceLocking(const bool);
+   bool FetchImageFromUrl(ImgBuffer& img);
    void GenerateEmptyImage(ImgBuffer& img);
    void GenerateSyntheticImage(ImgBuffer& img, double exp);
    int ResizeImageBuffer();
@@ -115,6 +117,9 @@ private:
    static const double nominalPixelSizeUm_;
 
    std::string URL;
+   std::string channelDevice;
+   std::string channelDeviceKey;
+   
    
    double exposureMaximum_;
    double dPhase_;
@@ -164,10 +169,10 @@ private:
 
 class MySequenceThread : public MMDeviceThreadBase
 {
-   friend class CDemoCamera;
+   friend class CSimulatingCamera;
    enum { default_numImages=1, default_intervalMS = 100 };
    public:
-      MySequenceThread(CDemoCamera* pCam);
+      MySequenceThread(CSimulatingCamera* pCam);
       ~MySequenceThread();
       void Stop();
       void Start(long numImages, double intervalMs);
@@ -188,7 +193,7 @@ class MySequenceThread : public MMDeviceThreadBase
       long imageCounter_;                                                       
       bool stop_;                                                               
       bool suspend_;                                                            
-      CDemoCamera* camera_;                                                     
+      CSimulatingCamera* camera_;                                                     
       MM::MMTime startTime_;                                                    
       MM::MMTime actualDuration_;                                               
       MM::MMTime lastFrameTime_;                                                
