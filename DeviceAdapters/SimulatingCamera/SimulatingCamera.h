@@ -64,12 +64,12 @@ public:
    int SetBinning(int bS);
 
    int IsExposureSequenceable(bool& isSequenceable) const;
-   int GetExposureSequenceMaxLength(long& nrEvents) const;
-   int StartExposureSequence();
-   int StopExposureSequence();
-   int ClearExposureSequence();
-   int AddToExposureSequence(double exposureTime_ms);
-   int SendExposureSequence() const;
+   int GetExposureSequenceMaxLength(long& nrEvents) { nrEvents = 0; return DEVICE_OK; };
+   int StartExposureSequence() { return DEVICE_ERR; }
+   int StopExposureSequence() { return DEVICE_ERR; }
+   int ClearExposureSequence() { return DEVICE_ERR; }
+   int AddToExposureSequence(double exposureTime_ms) { return DEVICE_ERR; }
+   int SendExposureSequence() { return DEVICE_ERR; }
 
    unsigned  GetNumberOfComponents() const { return nComponents_;};
 
@@ -78,91 +78,42 @@ public:
    int OnURL(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnChannelDevice(MM::PropertyBase* pProp, MM::ActionType eAct);
 
-   int OnMaxExposure(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnTestProperty(MM::PropertyBase* pProp, MM::ActionType eAct, long);
-   int OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnPixelType(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnBitDepth(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnReadoutTime(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnScanMode(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnErrorSimulation(MM::PropertyBase* , MM::ActionType );
    int OnCameraCCDXSize(MM::PropertyBase* , MM::ActionType );
    int OnCameraCCDYSize(MM::PropertyBase* , MM::ActionType );
-   int OnTriggerDevice(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnDropPixels(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnFastImage(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnSaturatePixels(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnFractionOfPixelsToDropOrSaturate(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnShouldRotateImages(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnShouldDisplayImageNumber(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnStripeWidth(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnCCDTemp(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnIsSequenceable(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnMode(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnCrash(MM::PropertyBase* pProp, MM::ActionType eAct);
 
-   // Special public DemoCamera methods
-   void AddBackgroundAndNoise(ImgBuffer& img, double mean, double stdDev);
-   // this function replace normal_distribution in C++11
-   double GaussDistributedValue(double mean, double std);
 
 private:
-   int SetAllowedBinning();
-   void TestResourceLocking(const bool);
    bool FetchImageFromUrl(ImgBuffer& img);
-   void GenerateEmptyImage(ImgBuffer& img);
-   void GenerateSyntheticImage(ImgBuffer& img, double exp);
    int ResizeImageBuffer();
 
    static const double nominalPixelSizeUm_;
 
-   std::string URL;
-   std::string channelDevice;
-   std::string channelDeviceKey;
+   std::string url_;
+   std::string channelDevice_;   
    
-   
-   double exposureMaximum_;
-   double dPhase_;
    ImgBuffer img_;
-   bool busy_;
-   bool stopOnOverFlow_;
    bool initialized_;
    double readoutUs_;
    MM::MMTime readoutStartTime_;
-   long scanMode_;
    int bitDepth_;
    unsigned roiX_;
    unsigned roiY_;
    MM::MMTime sequenceStartTime_;
-   bool isSequenceable_;
-   long sequenceMaxLength_;
-   bool sequenceRunning_;
-   unsigned long sequenceIndex_;
-   double GetSequenceExposure();
-   std::vector<double> exposureSequence_;
    long imageCounter_;
    long binSize_;
    long cameraCCDXSize_;
    long cameraCCDYSize_;
-   double ccdT_;
    std::string triggerDevice_;
 
    bool stopOnOverflow_;
 
-   bool dropPixels_;
-   bool fastImage_;
-   bool saturatePixels_;
-   double fractionOfPixelsToDropOrSaturate_;
-   bool shouldRotateImages_;
-   bool shouldDisplayImageNumber_;
-   double stripeWidth_;
 
-   double testProperty_[10];
    MMThreadLock imgPixelsLock_;
    friend class MySequenceThread;
    int nComponents_;
    MySequenceThread * thd_;
-   int mode_;
 };
 
 
@@ -202,88 +153,5 @@ class MySequenceThread : public MMDeviceThreadBase
 }; 
 
 
-class TransposeProcessor : public CImageProcessorBase<TransposeProcessor>
-{
-public:
-   TransposeProcessor () : inPlace_ (false), pTemp_(NULL), tempSize_(0), busy_(false)
-   {
-      // parent ID display
-      CreateHubIDProperty();
-   }
-   ~TransposeProcessor () {if( NULL!= pTemp_) free(pTemp_); tempSize_=0;  }
-
-   int Shutdown() {return DEVICE_OK;}
-   void GetName(char* name) const {strcpy(name,"TransposeProcessor");}
-
-   int Initialize();
-
-   bool Busy(void) { return busy_;};
-
-    // really primative image transpose algorithm which will work fine for non-square images... 
-   template <typename PixelType>
-   int TransposeRectangleOutOfPlace(PixelType* pI, unsigned int width, unsigned int height)
-   {
-      int ret = DEVICE_OK;
-      unsigned long tsize = width*height*sizeof(PixelType);
-      if( this->tempSize_ != tsize)
-      {
-         if( NULL != this->pTemp_)
-         {
-            free(pTemp_);
-            pTemp_ = NULL;
-         }
-         pTemp_ = (PixelType *)malloc(tsize);
-      }
-      if( NULL != pTemp_)
-      {
-         PixelType* pTmpImage = (PixelType *) pTemp_;
-         tempSize_ = tsize;
-         for( unsigned long ix = 0; ix < width; ++ix)
-         {
-            for( unsigned long iy = 0; iy < height; ++iy)
-            {
-               pTmpImage[iy + ix*width] = pI[ ix + iy*height];
-            }
-         }
-         memcpy( pI, pTmpImage, tsize);
-      }
-      else
-      {
-         ret = DEVICE_ERR;
-      }
-
-      return ret;
-   }
-
-   
-   template <typename PixelType>
-   void TransposeSquareInPlace(PixelType* pI, unsigned int dim)
-   { 
-      PixelType tmp;
-      for( unsigned long ix = 0; ix < dim; ++ix)
-      {
-         for( unsigned long iy = ix; iy < dim; ++iy)
-         {
-            tmp = pI[iy*dim + ix];
-            pI[iy*dim +ix] = pI[ix*dim + iy];
-            pI[ix*dim +iy] = tmp; 
-         }
-      }
-
-      return;
-   }
-
-   int Process(unsigned char* buffer, unsigned width, unsigned height, unsigned byteDepth);
-
-   // action interface
-   // ----------------
-   int OnInPlaceAlgorithm(MM::PropertyBase* pProp, MM::ActionType eAct);
-
-private:
-   bool inPlace_;
-   void* pTemp_;
-   unsigned long tempSize_;
-   bool busy_;
-};
 
 #endif //_DEMOCAMERA_H_
