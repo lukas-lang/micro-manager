@@ -1004,6 +1004,7 @@ inline long min(long a, long b) {
 
 bool CSimulatingCamera::FetchImageFromUrl(ImgBuffer& img)
 { 
+   MMThreadGuard g(imgPixelsLock_);
    double x, y, z;
    
    GetCoreCallback()->GetXYPosition(x, y);
@@ -1035,7 +1036,6 @@ bool CSimulatingCamera::FetchImageFromUrl(ImgBuffer& img)
    HTTPResponse response = HTTPClient::request(HTTPClient::GET, theUri);
    
    if(response.success) {
-     MMThreadGuard g(imgPixelsLock_);
      unsigned char* pBuf = const_cast<unsigned char*>(img_.GetPixels());
      memcpy(pBuf, response.body.c_str(), min(response.body.size(), img_.Height()*img_.Width()*img_.Depth()));
      return true;
