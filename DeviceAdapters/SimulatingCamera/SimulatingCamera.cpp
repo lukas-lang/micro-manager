@@ -1005,22 +1005,26 @@ inline long min(long a, long b) {
 bool CSimulatingCamera::FetchImageFromUrl(ImgBuffer& img)
 { 
    MMThreadGuard g(imgPixelsLock_);
+
    double x, y, z;
    
    GetCoreCallback()->GetXYPosition(x, y);
    GetCoreCallback()->GetFocusPosition(z);
    
    long channel = 0;
-   
-   if(channelDevice_.length() > 0) {
-    // I'd love to avoid "GetStateDevice"; but the device-agnostic API does not seem
-    // to give access to a "get position of a state device" function
-    // (i.e. I need to know the name of the state property)
-    MM::State *stateDevice = GetCoreCallback()->GetStateDevice(this, channelDevice_.c_str());
-    if(stateDevice) {
-      stateDevice->GetPosition(channel);
-    }
+
+   if(channelDevice_.length() > 0)
+   {
+     // I'd love to avoid "GetStateDevice"; but the device-agnostic API does not seem
+     // to give access to a "get position of a state device" function
+     // (i.e. I need to know the name of the state property)
+     MM::State *stateDevice = GetCoreCallback()->GetStateDevice(this, channelDevice_.c_str());
+     if(stateDevice)
+     {
+        stateDevice->GetPosition(channel);
+     }
    }
+
    // This works ... properly fetches <x,y,z> coordinates
       
    URI theUri(url_);
