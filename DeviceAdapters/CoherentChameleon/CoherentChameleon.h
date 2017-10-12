@@ -12,6 +12,9 @@
 //
 #define ERR_PORT_CHANGE_FORBIDDEN    10004
 #define ERR_DEVICE_NOT_FOUND         10005
+#define CONTROLLER_ERROR             20000
+
+#include  "error_code.h"
 
 #define POWERCONVERSION              1000 //convert the power into mW from the W it wants the commands in
 
@@ -49,9 +52,9 @@ public:
 	int OnMaximumLaserPower(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnWaveLength(MM::PropertyBase* pProp, MM::ActionType eAct/*, long*/);
 
-	std::string queryLaser(std::string thisToken);
-
-	std::string setLaser(std::string thisToken, std::string thisValue);
+	std::string SendCommand(std::string cmd, bool checkError = true) throw (error_code);
+	std::string queryParameter(std::string param, bool checkError = true) throw (error_code);
+	std::string setParameter(std::string param, std::string value, bool checkError = true) throw (error_code);
 
 
 	void initLimits();
