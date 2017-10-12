@@ -86,9 +86,8 @@ int CoherentChameleon::Initialize()
 	GenerateReadOnlyIDProperties();
 	std::stringstream msg;
 
-	setParameter("ECHO", 0, false);
-	setParameter("PROMPT", 0, false);
-
+	setParameter("ECHO", "0", false);
+	setParameter("PROMPT", "0", false);
 
 	//Initialize laser??
 	SendCommand(msg.str());
@@ -456,28 +455,20 @@ int CoherentChameleon::HandleErrors()
 }
 
 
-//********************
 // Shutter API
-//********************
 
 int CoherentChameleon::SetOpen(bool open)
 {
-	SetState((long)open);
-	return HandleErrors();
+ERRH_START
+	setParameter("LASER", open ? "1" : "0");
+ERRH_END
 }
 
 int CoherentChameleon::GetOpen(bool& open)
 {
-	long state;
-	GetState(state);
-	if (state == 1)
-		open = true;
-	else if (state == 0)
-		open = false;
-	else
-		error_ = DEVICE_UNKNOWN_POSITION;
-
-	return HandleErrors();
+ERRH_START
+	return queryParameter("LASER") == "1";
+ERRH_END
 }
 
 // ON for deltaT milliseconds
@@ -485,8 +476,9 @@ int CoherentChameleon::GetOpen(bool& open)
 // is this perhaps because this blocking call is not appropriate
 int CoherentChameleon::Fire(double deltaT)
 {
+ERRH_START
 	SetOpen(true);
-	CDeviceUtils::SleepMs((long)(deltaT + .5));
+	CDeviceUtils::SleepMs(deltaT + .5);
 	SetOpen(false);
-	return HandleErrors();
+ERRH_END
 }
