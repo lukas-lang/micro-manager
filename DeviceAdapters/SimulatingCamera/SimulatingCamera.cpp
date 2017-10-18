@@ -3,12 +3,13 @@
 // PROJECT:       Micro-Manager
 // SUBSYSTEM:     DeviceAdapters
 //-----------------------------------------------------------------------------
-// DESCRIPTION:   ...
-//                
+// DESCRIPTION:   A work in progress camera device adapter pulling image data
+///               via HTTP from specific feeder servers.
+//
 // AUTHOR:        Christian C. Sachs
 //
-// COPYRIGHT:     
-// LICENSE:       
+// COPYRIGHT:     Forschungszentrum Jülich
+// LICENSE:       BSD (2-clause/FreeBSD license)
 
 #include "SimulatingCamera.h"
 #include <cstdio>
@@ -88,7 +89,7 @@ CSimulatingCamera::CSimulatingCamera() :
    InitializeDefaultErrorMessages();
    readoutStartTime_ = GetCurrentMMTime();
    thd_ = new MySequenceThread(this);
-  
+
 }
 
 CSimulatingCamera::~CSimulatingCamera()
@@ -109,7 +110,7 @@ int CSimulatingCamera::Initialize()
 {
    if (initialized_)
       return DEVICE_OK;
-   
+
    // set property list
    // -----------------
 
@@ -130,19 +131,19 @@ int CSimulatingCamera::Initialize()
    // CameraID
    nRet = CreateStringProperty(MM::g_Keyword_CameraID, "V1.0", true);
    assert(nRet == DEVICE_OK);
-   
+
    nRet = CreateIntegerProperty("Binning", 1, true);
    assert(nRet == DEVICE_OK);
 
    CPropertyAction *pAct;
-     
-   
+
+
    pAct = new CPropertyAction (this, &CSimulatingCamera::OnURL);
-   nRet = CreateProperty("URL", "http://localhost:8555/", MM::String, false, pAct, false); 
+   nRet = CreateProperty("URL", "http://localhost:8555/", MM::String, false, pAct, false);
    assert(nRet == DEVICE_OK);
-   
+
    pAct = new CPropertyAction (this, &CSimulatingCamera::OnChannelDevice);
-   nRet = CreateProperty("ChannelDevice", "DWheel", MM::String, false, pAct, false); 
+   nRet = CreateProperty("ChannelDevice", "DWheel", MM::String, false, pAct, false);
    assert(nRet == DEVICE_OK);
 
    // pixel type
@@ -152,7 +153,7 @@ int CSimulatingCamera::Initialize()
 
    vector<string> pixelTypeValues;
    pixelTypeValues.push_back(g_PixelType_8bit);
-   pixelTypeValues.push_back(g_PixelType_16bit); 
+   pixelTypeValues.push_back(g_PixelType_16bit);
    pixelTypeValues.push_back(g_PixelType_32bitRGB);
    pixelTypeValues.push_back(g_PixelType_64bitRGB);
    //pixelTypeValues.push_back(::g_PixelType_32bit);
@@ -177,14 +178,14 @@ int CSimulatingCamera::Initialize()
    if (nRet != DEVICE_OK)
       return nRet;
 
-   
+
    // CCD size of the camera we are modeling
    pAct = new CPropertyAction (this, &CSimulatingCamera::OnCameraCCDXSize);
    CreateIntegerProperty("OnCameraCCDXSize", 512, false, pAct);
    pAct = new CPropertyAction (this, &CSimulatingCamera::OnCameraCCDYSize);
    CreateIntegerProperty("OnCameraCCDYSize", 512, false, pAct);
-   
-   
+
+
    // synchronize all properties
    // --------------------------
    nRet = UpdateStatus();
@@ -222,7 +223,7 @@ int CSimulatingCamera::Shutdown()
 
 /**
 * Performs exposure and grabs a single image.
-* This function should block during the actual exposure and return immediately afterwards 
+* This function should block during the actual exposure and return immediately afterwards
 * (i.e., before readout).  This behavior is needed for proper synchronization with the shutter.
 * Required by the MM::Camera API.
 */
@@ -230,7 +231,7 @@ int CSimulatingCamera::SnapImage()
 {
    static int callCounter = 0;
    ++callCounter;
-   
+
    MM::MMTime startTime = GetCurrentMMTime();
    double exp = GetExposure();
 
@@ -242,7 +243,7 @@ int CSimulatingCamera::SnapImage()
       while (exp > (GetCurrentMMTime() - startTime).getMsec())
       {
          CDeviceUtils::SleepMs(1);
-      }      
+      }
    }
    else
    {
@@ -271,7 +272,7 @@ const unsigned char* CSimulatingCamera::GetImageBuffer()
 {
    MMThreadGuard g(imgPixelsLock_);
    MM::MMTime readoutTime(readoutUs_);
-   while (readoutTime > (GetCurrentMMTime() - readoutStartTime_)) {}      
+   while (readoutTime > (GetCurrentMMTime() - readoutStartTime_)) {}
    unsigned char *pB = (unsigned char*)(img_.GetPixels());
    return pB;
 }
@@ -380,7 +381,7 @@ int CSimulatingCamera::ClearROI()
    ResizeImageBuffer();
    roiX_ = 0;
    roiY_ = 0;
-      
+
    return DEVICE_OK;
 }
 
@@ -442,21 +443,21 @@ int CSimulatingCamera::IsExposureSequenceable(bool& isSequenceable) const
  */
 int CSimulatingCamera::StartSequenceAcquisition(double interval)
 {
-   return StartSequenceAcquisition(LONG_MAX, interval, false);            
+   return StartSequenceAcquisition(LONG_MAX, interval, false);
 }
 
-/**                                                                       
-* Stop and wait for the Sequence thread finished                                   
-*/                                                                        
-int CSimulatingCamera::StopSequenceAcquisition()                                     
+/**
+* Stop and wait for the Sequence thread finished
+*/
+int CSimulatingCamera::StopSequenceAcquisition()
 {
    if (!thd_->IsStopped()) {
-      thd_->Stop();                                                       
-      thd_->wait();                                                       
-   }                                                                     
-                                                                          
-   return DEVICE_OK;                                                      
-} 
+      thd_->Stop();
+      thd_->wait();
+   }
+
+   return DEVICE_OK;
+}
 
 /**
 * Simple implementation of Sequence Acquisition
@@ -475,7 +476,7 @@ int CSimulatingCamera::StartSequenceAcquisition(long numImages, double interval_
    imageCounter_ = 0;
    thd_->Start(numImages,interval_ms);
    stopOnOverflow_ = stopOnOverflow;
-   
+
    return DEVICE_OK;
 }
 
@@ -487,14 +488,14 @@ int CSimulatingCamera::InsertImage()
    MM::MMTime timeStamp = this->GetCurrentMMTime();
    char label[MM::MaxStrLength];
    this->GetLabel(label);
- 
+
    // Important:  metadata about the image are generated here:
    Metadata md;
    md.put("Camera", label);
    md.put(MM::g_Keyword_Metadata_StartTime, CDeviceUtils::ConvertToString(sequenceStartTime_.getMsec()));
    md.put(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString((timeStamp - sequenceStartTime_).getMsec()));
-   md.put(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString( (long) roiX_)); 
-   md.put(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString( (long) roiY_)); 
+   md.put(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString( (long) roiX_));
+   md.put(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString( (long) roiY_));
 
    imageCounter_++;
 
@@ -527,12 +528,12 @@ int CSimulatingCamera::InsertImage()
 
 /*
  * Do actual capturing
- * Called from inside the thread  
+ * Called from inside the thread
  */
 int CSimulatingCamera::RunSequenceOnThread(MM::MMTime startTime)
 {
    int ret=DEVICE_ERR;
-   
+
    // Trigger
    if (triggerDevice_.length() > 0) {
       MM::Device* triggerDev = GetDevice(triggerDevice_.c_str());
@@ -541,7 +542,7 @@ int CSimulatingCamera::RunSequenceOnThread(MM::MMTime startTime)
          triggerDev->SetProperty("Trigger","+");
       }
    }
-   
+
    double exposure = GetExposure();
 
    FetchImageFromUrl(img_);
@@ -567,7 +568,7 @@ bool CSimulatingCamera::IsCapturing() {
 }
 
 /*
- * called from the thread function before exit 
+ * called from the thread function before exit
  */
 void CSimulatingCamera::OnThreadExiting() throw()
 {
@@ -640,10 +641,10 @@ void MySequenceThread::Resume() {
 int MySequenceThread::svc(void) throw()
 {
    int ret=DEVICE_ERR;
-   try 
+   try
    {
       do
-      {  
+      {
          ret = camera_->RunSequenceOnThread(startTime_);
       } while (DEVICE_OK == ret && !IsStopped() && imageCounter_++ < numImages_-1);
       if (IsStopped())
@@ -789,7 +790,7 @@ int CSimulatingCamera::OnPixelType(MM::PropertyBase* pProp, MM::ActionType eAct)
    default:
       break;
    }
-   return ret; 
+   return ret;
 }
 
 /**
@@ -838,10 +839,10 @@ int CSimulatingCamera::OnBitDepth(MM::PropertyBase* pProp, MM::ActionType eAct)
             break;
             case 32:
                bytesPerComponent = 4;
-               bitDepth_ = 32; 
+               bitDepth_ = 32;
                ret=DEVICE_OK;
             break;
-            default: 
+            default:
                // on error switch to default pixel type
                bytesPerComponent = 1;
 
@@ -854,7 +855,7 @@ int CSimulatingCamera::OnBitDepth(MM::PropertyBase* pProp, MM::ActionType eAct)
          GetProperty(MM::g_Keyword_PixelType, buf);
          std::string pixelType(buf);
          unsigned int bytesPerPixel = 1;
-         
+
 
          // automagickally change pixel type when bit depth exceeds possible value
          if (pixelType.compare(g_PixelType_8bit) == 0)
@@ -901,7 +902,7 @@ int CSimulatingCamera::OnBitDepth(MM::PropertyBase* pProp, MM::ActionType eAct)
    default:
       break;
    }
-   return ret; 
+   return ret;
 }
 
 
@@ -1003,14 +1004,14 @@ inline long min(long a, long b) {
 }
 
 bool CSimulatingCamera::FetchImageFromUrl(ImgBuffer& img)
-{ 
+{
    MMThreadGuard g(imgPixelsLock_);
 
    double x, y, z;
-   
+
    GetCoreCallback()->GetXYPosition(x, y);
    GetCoreCallback()->GetFocusPosition(z);
-   
+
    long channel = 0;
 
    if(channelDevice_.length() > 0)
@@ -1026,25 +1027,26 @@ bool CSimulatingCamera::FetchImageFromUrl(ImgBuffer& img)
    }
 
    // This works ... properly fetches <x,y,z> coordinates
-      
+
    URI theUri(url_);
-   
-   theUri.querystring = string("width=") + CDeviceUtils::ConvertToString((int)img_.Width()) + "&" 
+
+   theUri.querystring = string("width=") + CDeviceUtils::ConvertToString((int)img_.Width()) + "&"
     "height=" + CDeviceUtils::ConvertToString((int)img_.Height()) + "&"
-    "depth=" + CDeviceUtils::ConvertToString((int)img_.Depth()) + "&" 
-    "x=" + CDeviceUtils::ConvertToString(x) + "&" 
-    "y=" + CDeviceUtils::ConvertToString(y) + "&" 
+    "depth=" + CDeviceUtils::ConvertToString((int)img_.Depth()) + "&"
+    "x=" + CDeviceUtils::ConvertToString(x) + "&"
+    "y=" + CDeviceUtils::ConvertToString(y) + "&"
     "z=" + CDeviceUtils::ConvertToString(z) + "&"
-    "channel=" + CDeviceUtils::ConvertToString(channel); 
+    "channel=" + CDeviceUtils::ConvertToString(channel);
 
    HTTPResponse response = HTTPClient::request(HTTPClient::GET, theUri);
-   
+
    if(response.success) {
      unsigned char* pBuf = const_cast<unsigned char*>(img_.GetPixels());
      memcpy(pBuf, response.body.c_str(), min(response.body.size(), img_.Height()*img_.Width()*img_.Depth()));
      return true;
    } else {
      return false;
-   }    
-  
+   }
+
 }
+

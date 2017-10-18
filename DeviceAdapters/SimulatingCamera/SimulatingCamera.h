@@ -23,19 +23,19 @@
 
 class MySequenceThread;
 
-class CSimulatingCamera : public CCameraBase<CSimulatingCamera>  
+class CSimulatingCamera : public CCameraBase<CSimulatingCamera>
 {
 public:
    CSimulatingCamera();
    ~CSimulatingCamera();
-  
+
    // MMDevice API
    // ------------
    int Initialize();
    int Shutdown();
-  
-   void GetName(char* name) const;      
-   
+
+   void GetName(char* name) const;
+
    // MMCamera API
    // ------------
    int SnapImage();
@@ -47,8 +47,8 @@ public:
    long GetImageBufferSize() const;
    double GetExposure() const;
    void SetExposure(double exp);
-   int SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize); 
-   int GetROI(unsigned& x, unsigned& y, unsigned& xSize, unsigned& ySize); 
+   int SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize);
+   int GetROI(unsigned& x, unsigned& y, unsigned& xSize, unsigned& ySize);
    int ClearROI();
    int PrepareSequenceAcqusition() { return DEVICE_OK; }
    int StartSequenceAcquisition(double interval);
@@ -57,7 +57,7 @@ public:
    int InsertImage();
    int RunSequenceOnThread(MM::MMTime startTime);
    bool IsCapturing();
-   void OnThreadExiting() throw(); 
+   void OnThreadExiting() throw();
    double GetNominalPixelSizeUm() const {return nominalPixelSizeUm_;}
    double GetPixelSizeUm() const {return nominalPixelSizeUm_ * GetBinning();}
    int GetBinning() const;
@@ -91,8 +91,8 @@ private:
    static const double nominalPixelSizeUm_;
 
    std::string url_;
-   std::string channelDevice_;   
-   
+   std::string channelDevice_;
+
    ImgBuffer img_;
    bool initialized_;
    double readoutUs_;
@@ -131,27 +131,26 @@ class MySequenceThread : public MMDeviceThreadBase
       void Suspend();
       bool IsSuspended();
       void Resume();
-      double GetIntervalMs(){return intervalMs_;}                               
-      void SetLength(long images) {numImages_ = images;}                        
+      double GetIntervalMs(){return intervalMs_;}
+      void SetLength(long images) {numImages_ = images;}
       long GetLength() const {return numImages_;}
-      long GetImageCounter(){return imageCounter_;}                             
-      MM::MMTime GetStartTime(){return startTime_;}                             
+      long GetImageCounter(){return imageCounter_;}
+      MM::MMTime GetStartTime(){return startTime_;}
       MM::MMTime GetActualDuration(){return actualDuration_;}
-   private:                                                                     
+   private:
       int svc(void) throw();
-      double intervalMs_;                                                       
-      long numImages_;                                                          
-      long imageCounter_;                                                       
-      bool stop_;                                                               
-      bool suspend_;                                                            
-      CSimulatingCamera* camera_;                                                     
-      MM::MMTime startTime_;                                                    
-      MM::MMTime actualDuration_;                                               
-      MM::MMTime lastFrameTime_;                                                
-      MMThreadLock stopLock_;                                                   
-      MMThreadLock suspendLock_;                                                
-}; 
-
-
+      double intervalMs_;
+      long numImages_;
+      long imageCounter_;
+      bool stop_;
+      bool suspend_;
+      CSimulatingCamera* camera_;
+      MM::MMTime startTime_;
+      MM::MMTime actualDuration_;
+      MM::MMTime lastFrameTime_;
+      MMThreadLock stopLock_;
+      MMThreadLock suspendLock_;
+};
 
 #endif //_DEMOCAMERA_H_
+
