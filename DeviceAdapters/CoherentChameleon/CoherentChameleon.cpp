@@ -86,8 +86,8 @@ int CoherentChameleon::Initialize()
 	GenerateReadOnlyIDProperties();
 	std::stringstream msg;
 
-	setParameter("ECHO", "0", false);
-	setParameter("PROMPT", "0", false);
+	SetParameter("ECHO", "0", false);
+	SetParameter("PROMPT", "0", false);
 
 	//Initialize laser??
 	SendCommand(msg.str());
@@ -131,22 +131,22 @@ std::string CoherentChameleon::SendCommand(std::string cmd, bool checkError) thr
 	return answer;
 }
 
-std::string CoherentChameleon::queryParameter(std::string param, bool checkError) throw (error_code)
+std::string CoherentChameleon::QueryParameter(std::string param, bool checkError) throw (error_code)
 {
 	return SendCommand("?" + param, checkError);
 }
-std::string CoherentChameleon::setParameter(std::string param, std::string value, bool checkError) throw (error_code)
+std::string CoherentChameleon::SetParameter(std::string param, std::string value, bool checkError) throw (error_code)
 {
 	SendCommand(param + "=" + value, checkError);
 
-	return queryParameter(param, checkError);
+	return QueryParameter(param, checkError);
 }
 
 void CoherentChameleon::initLimits()
 {
-	std::string val = queryParameter(maxPowerToken_);
+	std::string val = QueryParameter(maxPowerToken_);
 	minlp_ = (atof(val.c_str()) * 1000);
-	val = queryParameter(maxPowerToken_);
+	val = QueryParameter(maxPowerToken_);
 	maxlp_ = (atof(val.c_str()) * 1000);
 }
 /////////////////////////////////////////////
@@ -300,7 +300,7 @@ int CoherentChameleon::OnHeadID(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
 	{
-		pProp->Set((this->queryParameter(headSerialNoToken_)).c_str());
+		pProp->Set((this->QueryParameter(headSerialNoToken_)).c_str());
 	}
 	else if (eAct == MM::AfterSet)
 	{
@@ -314,7 +314,7 @@ int CoherentChameleon::OnHeadUsageHours(MM::PropertyBase* pProp, MM::ActionType 
 {
 	if (eAct == MM::BeforeGet)
 	{
-		std::string svalue = this->queryParameter(headUsageHoursToken_);
+		std::string svalue = this->QueryParameter(headUsageHoursToken_);
 		double dvalue = atof(svalue.c_str());
 		pProp->Set(dvalue);
 	}
@@ -330,7 +330,7 @@ int CoherentChameleon::OnMinimumLaserPower(MM::PropertyBase* pProp, MM::ActionTy
 {
 	if (eAct == MM::BeforeGet)
 	{
-		pProp->Set(atof((this->queryParameter(minPowerToken_)).c_str()));
+		pProp->Set(atof((this->QueryParameter(minPowerToken_)).c_str()));
 	}
 	else if (eAct == MM::AfterSet)
 	{
@@ -343,7 +343,7 @@ int CoherentChameleon::OnMaximumLaserPower(MM::PropertyBase* pProp, MM::ActionTy
 {
 	if (eAct == MM::BeforeGet)
 	{
-		pProp->Set(atof((this->queryParameter(maxPowerToken_)).c_str()));
+		pProp->Set(atof((this->QueryParameter(maxPowerToken_)).c_str()));
 	}
 	else if (eAct == MM::AfterSet)
 	{
@@ -357,7 +357,7 @@ int CoherentChameleon::OnWaveLength(MM::PropertyBase* pProp, MM::ActionType eAct
 {
 	if (eAct == MM::BeforeGet)
 	{
-		pProp->Set(atof((this->queryParameter(wavelengthToken_)).c_str()));
+		pProp->Set(atof((this->QueryParameter(wavelengthToken_)).c_str()));
 	}
 	else if (eAct == MM::AfterSet)
 	{
@@ -369,7 +369,7 @@ int CoherentChameleon::OnWaveLength(MM::PropertyBase* pProp, MM::ActionType eAct
 
 void CoherentChameleon::GetPowerReadback(double& value)
 {
-	std::string ans = this->queryParameter(powerReadbackToken_);
+	std::string ans = this->QueryParameter(powerReadbackToken_);
 	value = POWERCONVERSION*atof(ans.c_str());
 }
 
@@ -379,7 +379,7 @@ void CoherentChameleon::SetPowerSetpoint(double requestedPowerSetpoint, double& 
 	std::ostringstream setpointString;
 	// number like 100.00
 	setpointString << std::setprecision(6) << requestedPowerSetpoint / POWERCONVERSION;
-	result = this->setParameter(powerSetpointToken_, setpointString.str());
+	result = this->SetParameter(powerSetpointToken_, setpointString.str());
 	//compare quantized setpoint to requested setpoint
 	// the difference can be rather large
 
@@ -396,7 +396,7 @@ void CoherentChameleon::SetPowerSetpoint(double requestedPowerSetpoint, double& 
 
 void CoherentChameleon::GetPowerSetpoint(double& value)
 {
-	std::string ans = this->queryParameter(powerSetpointToken_);
+	std::string ans = this->QueryParameter(powerSetpointToken_);
 	value = POWERCONVERSION*atof(ans.c_str());
 }
 
@@ -411,14 +411,14 @@ void CoherentChameleon::SetState(long state)
 	{
 		atoken << "Off";
 	}
-	this->setParameter(laserOnToken_, atoken.str());
+	this->SetParameter(laserOnToken_, atoken.str());
 	// Set timer for the Busy signal
 	changedTime_ = GetCurrentMMTime();
 }
 
 void CoherentChameleon::GetState(long &value)
 {
-	std::string ans = this->queryParameter(laserOnToken_);
+	std::string ans = this->QueryParameter(laserOnToken_);
 	std::transform(ans.begin(), ans.end(), ans.begin(), ::tolower);
 	if (ans.find("on") == 0)
 	{
@@ -438,12 +438,12 @@ void CoherentChameleon::SetExternalLaserPowerControl(int value)
 {
 	std::ostringstream atoken;
 	atoken << value;
-	this->setParameter(externalPowerControlToken_, atoken.str());
+	this->SetParameter(externalPowerControlToken_, atoken.str());
 }
 
 void CoherentChameleon::GetExternalLaserPowerControl(int& value)
 {
-	std::string ans = this->queryParameter(externalPowerControlToken_);
+	std::string ans = this->QueryParameter(externalPowerControlToken_);
 	value = atol(ans.c_str());
 }
 
@@ -460,14 +460,14 @@ int CoherentChameleon::HandleErrors()
 int CoherentChameleon::SetOpen(bool open)
 {
 ERRH_START
-	setParameter("LASER", open ? "1" : "0");
+	SetParameter("LASER", open ? "1" : "0");
 ERRH_END
 }
 
 int CoherentChameleon::GetOpen(bool& open)
 {
 ERRH_START
-	return queryParameter("LASER") == "1";
+	return QueryParameter("LASER") == "1";
 ERRH_END
 }
 

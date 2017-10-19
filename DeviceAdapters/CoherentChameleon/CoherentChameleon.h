@@ -53,8 +53,8 @@ public:
 	int OnWaveLength(MM::PropertyBase* pProp, MM::ActionType eAct/*, long*/);
 
 	std::string SendCommand(std::string cmd, bool checkError = true) throw (error_code);
-	std::string queryParameter(std::string param, bool checkError = true) throw (error_code);
-	std::string setParameter(std::string param, std::string value, bool checkError = true) throw (error_code);
+	std::string QueryParameter(std::string param, bool checkError = true) throw (error_code);
+	std::string SetParameter(std::string param, std::string value, bool checkError = true) throw (error_code);
 
 
 	void initLimits();
