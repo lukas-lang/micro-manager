@@ -42,11 +42,13 @@ public:
 
 	int OnPath(MM::PropertyBase* pProp, MM::ActionType eAct);
 
-	cv::Mat getImg() const throw (error_code);
+	void getImg() const throw (error_code);
 
 	void initSize() const;
 
 private:
+	bool initialized_;
+
 	std::string path_;
 	mutable unsigned width_;
 	mutable unsigned height_;
@@ -56,7 +58,9 @@ private:
 	mutable unsigned roiWidth_;
 	mutable unsigned roiHeight_;
 
+	const uchar* emptyImg;
 	mutable bool initSize_;
 
-	cv::Mat curImg_;
+	mutable cv::Mat curImg_;
+	mutable std::string curPath_;
 };

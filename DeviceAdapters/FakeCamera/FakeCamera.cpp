@@ -7,12 +7,29 @@
 const char* cameraName = "FakeCamera";
 
 FakeCamera::FakeCamera() :
+	initialized_(false),
 	path_(""),
 	roiX_(0),
 	roiY_(0),
-	initSize_(false)
+	emptyImg(new uchar[1]),
+	initSize_(false),
+	curPath_("")
 {
-	CreateProperty("Path Mask", "", MM::String, false, new CPropertyAction(this, &FakeCamera::OnPath), true);
+	CreateProperty("Path Mask", "", MM::String, false, new CPropertyAction(this, &FakeCamera::OnPath));
+
+	CreateProperty(MM::g_Keyword_Name, cameraName, MM::String, true);
+
+	// Description
+	CreateProperty(MM::g_Keyword_Description, "Loads images from disk according to position of focusing stage", MM::String, true);
+
+	// CameraName
+	CreateProperty(MM::g_Keyword_CameraName, "Fake camera adapter", MM::String, true);
+
+	// CameraID
+	CreateProperty(MM::g_Keyword_CameraID, "V1.0", MM::String, true);
+
+	// binning
+	CreateProperty(MM::g_Keyword_Binning, "1", MM::Integer, false);
 
 	SetErrorText(OUT_OF_RANGE, "Parameters out of range");
 }
@@ -23,14 +40,21 @@ FakeCamera::~FakeCamera()
 
 int FakeCamera::Initialize()
 {
+	if (initialized_)
+		return DEVICE_OK;
+
 	initSize_ = false;
+
+	initialized_ = true;
 
 	return DEVICE_OK;
 }
 
 int FakeCamera::Shutdown()
 {
-	return 0;
+	initialized_ = false;
+
+	return DEVICE_OK;
 }
 
 void FakeCamera::GetName(char * name) const
@@ -57,7 +81,7 @@ int FakeCamera::GetBinning() const
 
 int FakeCamera::SetBinning(int)
 {
-	return DEVICE_UNSUPPORTED_COMMAND;
+	return DEVICE_OK;
 }
 
 void FakeCamera::SetExposure(double)
@@ -114,6 +138,9 @@ int FakeCamera::IsExposureSequenceable(bool & isSequenceable) const
 
 const unsigned char * FakeCamera::GetImageBuffer()
 {
+	if (!initSize_)
+		return emptyImg;
+
 	return curImg_.datastart;
 }
 
@@ -141,7 +168,7 @@ int FakeCamera::SnapImage()
 ERRH_START
 	initSize();
 
-	curImg_ = getImg();
+	getImg();
 
 	curImg_.adjustROI(roiY_, roiY_ + roiHeight_, roiX_, roiX_ + roiWidth_);
 
@@ -157,12 +184,24 @@ int FakeCamera::OnPath(MM::PropertyBase * pProp, MM::ActionType eAct)
 	else if (eAct == MM::AfterSet)
 	{
 		pProp->Get(path_);
+		initSize_ = false;
+		curPath_ = "";
+		curImg_ = cv::Mat(0, (int*)0, 0, (void*)0, (size_t*)0);
+
+		if (initialized_)
+		{
+			ERRH_START
+				getImg();
+			ERRH_END
+		}
+
+		initSize();
 	}
 
 	return DEVICE_OK;
 }
 
-cv::Mat FakeCamera::getImg() const throw (error_code)
+void FakeCamera::getImg() const throw (error_code)
 {
 	double dPos;
 
@@ -170,10 +209,26 @@ cv::Mat FakeCamera::getImg() const throw (error_code)
 
 	if (ret != 0)
 		throw error_code(CONTROLLER_ERROR, "Focus device not found");
-	
+
 	std::string path = boost::replace_all_copy(path_, "#", to_string((int)dPos));
 
-	return cv::imread(path, cv::IMREAD_GRAYSCALE);
+	if (path == curPath_)
+		return;
+
+	cv::Mat img = cv::imread(path, cv::IMREAD_GRAYSCALE);
+
+	if (img.data == NULL)
+		if (curImg_.data != NULL)
+		{
+			LogMessage("Could not find image '" + path + "', reusing last valid image");
+			curPath_ = path;
+			return;
+		}
+		else
+			throw error_code(CONTROLLER_ERROR, "Could not find image '" + path + "'. Please specify a valid path mask (# is used as placeholder for stage position)");
+
+	curPath_ = path;
+	curImg_ = img;
 }
 
 void FakeCamera::initSize() const
@@ -183,16 +238,16 @@ void FakeCamera::initSize() const
 
 	try
 	{
-		cv::Mat img = getImg();
+		getImg();
 
-		roiWidth_ = width_ = img.rows;
-		roiHeight_ = height_ = img.cols;
+		roiWidth_ = width_ = curImg_.rows;
+		roiHeight_ = height_ = curImg_.cols;
 
 		initSize_ = true;
 	}
 	catch (error_code)
 	{
-		roiWidth_ = width_ = 0;
-		roiHeight_ = height_ = 0;
+		roiWidth_ = width_ = 1;
+		roiHeight_ = height_ = 1;
 	}
 }
