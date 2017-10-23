@@ -1,13 +1,11 @@
 #include "../../MMDevice/ModuleInterface.h"
 
-#include "CoherentChameleon.h"
-
-const char* controllerName = "CoherentChameleon";
+#include "FakeCamera.h"
 
 // Exported MMDevice API
 MODULE_API void InitializeModuleData()
 {
-	RegisterDevice(controllerName, MM::ShutterDevice, "Coherent Chameleon Laser");
+	RegisterDevice(cameraName, MM::CameraDevice, "Fake camera that loads images from disk");
 }
 
 MODULE_API MM::Device* CreateDevice(const char* deviceName)
@@ -17,9 +15,9 @@ MODULE_API MM::Device* CreateDevice(const char* deviceName)
 
 	std::string deviceName_(deviceName);
 
-	if (deviceName_ == controllerName)
+	if (deviceName_ == cameraName)
 	{
-		CoherentChameleon* s = new CoherentChameleon();
+		FakeCamera* s = new FakeCamera();
 		return s;
 	}
 	

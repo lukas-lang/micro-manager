@@ -127,43 +127,67 @@
     <ClCompile>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;FAKECAMERA_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(MM_3RDPARTYPUBLIC)\OpenCV2.4.8\build\include;$(MM_MMDEVICE_INCLUDEDIR);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>opencv_core248d.lib;opencv_highgui248d.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(MM_3RDPARTYPUBLIC)\OpenCV2.4.8\build\x86\vc10\lib;$(MM_BOOST_LIBDIR);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
+    <PostBuildEvent>
+      <Command>copy /Y "$(TargetDir)$(TargetFileName)" "C:\Program Files (x86)\Micro-Manager-2.0beta"</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug EnC|Win32'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;FAKECAMERA_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <AdditionalIncludeDirectories>$(MM_3RDPARTYPUBLIC)\OpenCV2.4.8\build\include;$(MM_MMDEVICE_INCLUDEDIR);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>opencv_core248d.lib;opencv_highgui248.libd;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(MM_3RDPARTYPUBLIC)\OpenCV2.4.8\build\x86\vc10\lib;$(MM_BOOST_LIBDIR);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
+    <PostBuildEvent>
+      <Command>copy /Y "$(TargetDir)$(TargetFileName)" "C:\Program Files (x86)\Micro-Manager-2.0beta"</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;FAKECAMERA_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(MM_3RDPARTYPUBLIC)\OpenCV2.4.8\build\include;$(MM_MMDEVICE_INCLUDEDIR);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>opencv_core248d.lib;opencv_highgui248d.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(MM_3RDPARTYPUBLIC)\OpenCV2.4.8\build\x64\vc10\lib;$(MM_BOOST_LIBDIR);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
+    <PostBuildEvent>
+      <Command>copy /Y "$(TargetDir)$(TargetFileName)" "C:\Program Files\Micro-Manager-2.0beta"</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug EnC|x64'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;FAKECAMERA_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <AdditionalIncludeDirectories>$(MM_3RDPARTYPUBLIC)\OpenCV2.4.8\build\include;$(MM_MMDEVICE_INCLUDEDIR);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>opencv_core248d.lib;opencv_highgui248d.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(MM_3RDPARTYPUBLIC)\OpenCV2.4.8\build\x64\vc10\lib;$(MM_BOOST_LIBDIR);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
+    <PostBuildEvent>
+      <Command>copy /Y "$(TargetDir)$(TargetFileName)" "C:\Program Files\Micro-Manager-2.0beta"</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -171,13 +195,19 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;FAKECAMERA_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(MM_3RDPARTYPUBLIC)\OpenCV2.4.8\build\include;$(MM_MMDEVICE_INCLUDEDIR);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalDependencies>opencv_core248.lib;opencv_highgui248.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(MM_3RDPARTYPUBLIC)\OpenCV2.4.8\build\x86\vc10\lib;$(MM_BOOST_LIBDIR);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
+    <PostBuildEvent>
+      <Command>copy /Y "$(TargetDir)$(TargetFileName)" "C:\Program Files (x86)\Micro-Manager-2.0beta"</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -185,13 +215,19 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;FAKECAMERA_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(MM_3RDPARTYPUBLIC)\OpenCV2.4.8\build\include;$(MM_MMDEVICE_INCLUDEDIR);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalDependencies>opencv_core248.lib;opencv_highgui248.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(MM_3RDPARTYPUBLIC)\OpenCV2.4.8\build\x64\vc10\lib;$(MM_BOOST_LIBDIR);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
+    <PostBuildEvent>
+      <Command>copy /Y "$(TargetDir)$(TargetFileName)" "C:\Program Files\Micro-Manager-2.0beta"</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\MMDevice\MMDevice-SharedRuntime.vcxproj" Condition="'$(Configuration)'!='Debug EnC'">
@@ -204,12 +240,14 @@
   <ItemGroup>
     <ClCompile Include="CoherentChameleon.cpp" />
     <ClCompile Include="error_code.cpp" />
+    <ClCompile Include="FakeCamera.cpp" />
     <ClCompile Include="module.cpp" />
     <ClCompile Include="Util.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CoherentChameleon.h" />
     <ClInclude Include="error_code.h" />
+    <ClInclude Include="FakeCamera.h" />
     <ClInclude Include="Util.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
