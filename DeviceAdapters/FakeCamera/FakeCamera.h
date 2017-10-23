@@ -62,5 +62,8 @@ private:
 	mutable bool initSize_;
 
 	mutable cv::Mat curImg_;
+	cv::Mat roi_;
 	mutable std::string curPath_;
+
+	double exposure_;
 };

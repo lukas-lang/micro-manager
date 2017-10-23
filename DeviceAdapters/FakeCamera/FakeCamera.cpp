@@ -13,7 +13,8 @@ FakeCamera::FakeCamera() :
 	roiY_(0),
 	emptyImg(new uchar[1]),
 	initSize_(false),
-	curPath_("")
+	curPath_(""),
+	exposure_(10)
 {
 	CreateProperty("Path Mask", "", MM::String, false, new CPropertyAction(this, &FakeCamera::OnPath));
 
@@ -84,18 +85,19 @@ int FakeCamera::SetBinning(int)
 	return DEVICE_OK;
 }
 
-void FakeCamera::SetExposure(double)
+void FakeCamera::SetExposure(double exposure)
 {
+	exposure_ = exposure;
 }
 
 double FakeCamera::GetExposure() const
 {
-	return 1;
+	return exposure_;
 }
 
 int FakeCamera::SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize)
 {
-	if (x + xSize > width_ || y + ySize > 0)
+	if (x + xSize > width_ || y + ySize > height_)
 	{
 		return OUT_OF_RANGE;
 	}
@@ -141,7 +143,12 @@ const unsigned char * FakeCamera::GetImageBuffer()
 	if (!initSize_)
 		return emptyImg;
 
-	return curImg_.datastart;
+	roi_ = curImg_(cv::Range(roiY_, roiY_ + roiHeight_), cv::Range(roiX_, roiX_ + roiWidth_));
+
+	if (!roi_.isContinuous())
+		roi_ = roi_.clone();
+
+	return roi_.data;
 }
 
 unsigned FakeCamera::GetImageWidth() const
@@ -166,11 +173,18 @@ unsigned FakeCamera::GetImageBytesPerPixel() const
 int FakeCamera::SnapImage()
 {
 ERRH_START
+
+	MM::MMTime start = GetCoreCallback()->GetCurrentMMTime();
 	initSize();
 
 	getImg();
 
-	curImg_.adjustROI(roiY_, roiY_ + roiHeight_, roiX_, roiX_ + roiWidth_);
+	MM::MMTime end = GetCoreCallback()->GetCurrentMMTime();
+
+	double rem = exposure_ - (end - start).getMsec();
+
+	if (rem > 0)
+		CDeviceUtils::SleepMs(rem);
 
 ERRH_END
 }
@@ -194,8 +208,6 @@ int FakeCamera::OnPath(MM::PropertyBase * pProp, MM::ActionType eAct)
 				getImg();
 			ERRH_END
 		}
-
-		initSize();
 	}
 
 	return DEVICE_OK;
@@ -240,8 +252,8 @@ void FakeCamera::initSize() const
 	{
 		getImg();
 
-		roiWidth_ = width_ = curImg_.rows;
-		roiHeight_ = height_ = curImg_.cols;
+		roiWidth_ = width_ = curImg_.cols;
+		roiHeight_ = height_ = curImg_.rows;
 
 		initSize_ = true;
 	}
