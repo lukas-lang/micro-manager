@@ -15,9 +15,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="CoherentChameleon.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="module.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -32,9 +29,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="CoherentChameleon.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="error_code.h">
       <Filter>Header Files</Filter>
     </ClInclude>

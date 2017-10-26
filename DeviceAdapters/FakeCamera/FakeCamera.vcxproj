@@ -238,14 +238,12 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="CoherentChameleon.cpp" />
     <ClCompile Include="error_code.cpp" />
     <ClCompile Include="FakeCamera.cpp" />
     <ClCompile Include="module.cpp" />
     <ClCompile Include="Util.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="CoherentChameleon.h" />
     <ClInclude Include="error_code.h" />
     <ClInclude Include="FakeCamera.h" />
     <ClInclude Include="Util.h" />
