@@ -58,7 +58,7 @@ private:
 	mutable unsigned roiWidth_;
 	mutable unsigned roiHeight_;
 
-	const uchar* emptyImg;
+	const cv::Mat emptyImg;
 	mutable bool initSize_;
 
 	mutable cv::Mat curImg_;

@@ -11,11 +11,14 @@ FakeCamera::FakeCamera() :
 	path_(""),
 	roiX_(0),
 	roiY_(0),
-	emptyImg(new uchar[1]),
+	emptyImg(1, 1, CV_8UC1),
 	initSize_(false),
+	curImg_(emptyImg),
 	curPath_(""),
 	exposure_(10)
 {
+	*(emptyImg.data) = 0;
+
 	CreateProperty("Path Mask", "", MM::String, false, new CPropertyAction(this, &FakeCamera::OnPath));
 
 	CreateProperty(MM::g_Keyword_Name, cameraName, MM::String, true);
@@ -72,7 +75,7 @@ long FakeCamera::GetImageBufferSize() const
 
 unsigned FakeCamera::GetBitDepth() const
 {
-	return 8;
+	return 8 * curImg_.elemSize();
 }
 
 int FakeCamera::GetBinning() const
@@ -141,7 +144,7 @@ int FakeCamera::IsExposureSequenceable(bool & isSequenceable) const
 const unsigned char * FakeCamera::GetImageBuffer()
 {
 	if (!initSize_)
-		return emptyImg;
+		return emptyImg.data;
 
 	roi_ = curImg_(cv::Range(roiY_, roiY_ + roiHeight_), cv::Range(roiX_, roiX_ + roiWidth_));
 
@@ -167,7 +170,7 @@ unsigned FakeCamera::GetImageHeight() const
 
 unsigned FakeCamera::GetImageBytesPerPixel() const
 {
-	return 1;
+	return curImg_.elemSize();
 }
 
 int FakeCamera::SnapImage()
@@ -200,7 +203,7 @@ int FakeCamera::OnPath(MM::PropertyBase * pProp, MM::ActionType eAct)
 		pProp->Get(path_);
 		initSize_ = false;
 		curPath_ = "";
-		curImg_ = cv::Mat(0, (int*)0, 0, (void*)0, (size_t*)0);
+		curImg_ = emptyImg;
 
 		if (initialized_)
 		{
@@ -227,7 +230,7 @@ void FakeCamera::getImg() const throw (error_code)
 	if (path == curPath_)
 		return;
 
-	cv::Mat img = cv::imread(path, cv::IMREAD_GRAYSCALE);
+	cv::Mat img = cv::imread(path, cv::IMREAD_GRAYSCALE | cv::IMREAD_ANYDEPTH);
 
 	if (img.data == NULL)
 		if (curImg_.data != NULL)
