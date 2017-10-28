@@ -5,7 +5,11 @@
 #include "Util.h"
 
 const char* cameraName = "FakeCamera";
-const char* g_None = "None";
+
+const char* label_CV_8U = "8bit";
+const char* label_CV_16U = "16bit";
+const char* label_CV_8UC4 = "32bitRGB";
+const char* label_CV_16UC4 = "64bitRGB";
 
 FakeCamera::FakeCamera() :
 	initialized_(false),
@@ -13,13 +17,13 @@ FakeCamera::FakeCamera() :
 	roiX_(0),
 	roiY_(0),
 	capturing_(false),
-	emptyImg(1, 1, CV_8UC1),
-	initSize_(false),
 	byteCount_(1),
-	curPath_(""),
+	type_(CV_8UC1),
+	emptyImg(1, 1, type_),
+	color_(false),
 	exposure_(10)
 {
-	*(emptyImg.data) = 0;
+	resetCurImg();
 
 	CreateProperty("Path Mask", "", MM::String, false, new CPropertyAction(this, &FakeCamera::OnPath));
 
@@ -37,11 +41,13 @@ FakeCamera::FakeCamera() :
 	// binning
 	CreateProperty(MM::g_Keyword_Binning, "1", MM::Integer, false);
 
-	CreateStringProperty(MM::g_Keyword_PixelType, "8bit", false, new CPropertyAction(this, &FakeCamera::OnPixelType));
+	CreateStringProperty(MM::g_Keyword_PixelType, label_CV_8U, false, new CPropertyAction(this, &FakeCamera::OnPixelType));
 
 	std::vector<std::string> pixelTypeValues;
-	pixelTypeValues.push_back("8bit");
-	pixelTypeValues.push_back("16bit");
+	pixelTypeValues.push_back(label_CV_8U);
+	pixelTypeValues.push_back(label_CV_16U);
+	pixelTypeValues.push_back(label_CV_8UC4);
+	pixelTypeValues.push_back(label_CV_16UC4);
 
 	SetAllowedValues(MM::g_Keyword_PixelType, pixelTypeValues);
 	
@@ -83,7 +89,7 @@ long FakeCamera::GetImageBufferSize() const
 {
 	initSize();
 
-	return roiWidth_ * roiHeight_ * byteCount_;
+	return roiWidth_ * roiHeight_ * GetImageBytesPerPixel();
 }
 
 unsigned FakeCamera::GetBitDepth() const
@@ -127,6 +133,8 @@ int FakeCamera::SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize)
 	roiWidth_ = xSize;
 	roiHeight_ = ySize;
 
+	updateROI();
+
 	return DEVICE_OK;
 }
 
@@ -160,19 +168,17 @@ int FakeCamera::IsExposureSequenceable(bool & isSequenceable) const
 
 const unsigned char * FakeCamera::GetImageBuffer()
 {
-	if (!initSize_)
-	{
-		assert(width_ * height_ * byteCount_ == 1);
-		return emptyImg.data;
-	}
-
-	roi_ = curImg_(cv::Range(roiY_, roiY_ + roiHeight_), cv::Range(roiX_, roiX_ + roiWidth_));
-
-	if (!roi_.isContinuous())
-		roi_ = roi_.clone();
-
-	assert(roiWidth_ * roiHeight_ * byteCount_ == roi_.total() * roi_.elemSize());
 	return roi_.data;
+}
+
+unsigned FakeCamera::GetNumberOfComponents() const
+{
+	return color_ ? 4 : 1;
+}
+
+const unsigned int* FakeCamera::GetImageBufferAsRGB32()
+{
+	return color_ ? (const unsigned int*)roi_.data : 0;
 }
 
 unsigned FakeCamera::GetImageWidth() const
@@ -191,7 +197,7 @@ unsigned FakeCamera::GetImageHeight() const
 
 unsigned FakeCamera::GetImageBytesPerPixel() const
 {
-	return byteCount_;
+	return color_ ? 4 * byteCount_ : byteCount_;
 }
 
 int FakeCamera::SnapImage()
@@ -241,9 +247,7 @@ int FakeCamera::OnPath(MM::PropertyBase * pProp, MM::ActionType eAct)
 	{
 		std::string oldPath = path_;
 		pProp->Get(path_);
-		initSize_ = false;
-		curPath_ = "";
-		curImg_ = emptyImg;
+		resetCurImg();
 
 		if (initialized_)
 		{
@@ -274,7 +278,22 @@ int FakeCamera::OnPixelType(MM::PropertyBase * pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
 	{
-		pProp->Set(byteCount_ == 1 ? "8bit" : "16bit");
+		switch (type_)
+		{
+		case CV_8UC1:
+			pProp->Set(label_CV_8U);
+			break;
+		case CV_16UC1:
+			pProp->Set(label_CV_16U);
+			break;
+		case CV_8UC4:
+			pProp->Set(label_CV_8UC4);
+			break;
+		case CV_16UC4:
+			pProp->Set(label_CV_16UC4);
+			break;
+
+		}
 	}
 	else if (eAct == MM::AfterSet)
 	{
@@ -284,11 +303,35 @@ int FakeCamera::OnPixelType(MM::PropertyBase * pProp, MM::ActionType eAct)
 		std::string val;
 		pProp->Get(val);
 
-		byteCount_ = val == "16bit" ? 2 : 1;
+		if (val == label_CV_16U)
+		{
+			byteCount_ = 2;
+			color_ = false;
+			type_ = CV_16UC1;
+		}
+		else if (val == label_CV_8UC4)
+		{
+			byteCount_ = 1;
+			color_ = true;
+			type_ = CV_8UC4;
+		}
+		else if (val == label_CV_16UC4)
+		{
+			byteCount_ = 2;
+			color_ = true;
+			type_ = CV_16UC4;
+		}
+		else
+		{
+			byteCount_ = 1;
+			color_ = false;
+			type_ = CV_8UC1;
+		}
 
-		emptyImg.convertTo(emptyImg, byteCount_ == 1 ? CV_8U : CV_16U, scaleFac(emptyImg.elemSize(), byteCount_));
-		if (curImg_.data != NULL)
-			curImg_.convertTo(curImg_, byteCount_ == 1 ? CV_8U : CV_16U, scaleFac(curImg_.elemSize(), byteCount_));
+		emptyImg = cv::Mat(1, 1, type_);
+		emptyImg = 0;
+
+		resetCurImg();
 	}
 
 	return DEVICE_OK;
@@ -392,8 +435,10 @@ void FakeCamera::getImg() const throw (error_code)
 	if (path == curPath_)
 		return;
 
-	cv::Mat img = path == lastFailedPath_ ? lastFailedImg_ : cv::imread(path, cv::IMREAD_GRAYSCALE | cv::IMREAD_ANYDEPTH);
+	cv::Mat img = path == lastFailedPath_ ? lastFailedImg_ : cv::imread(path, cv::IMREAD_ANYDEPTH | (color_ ? cv::IMREAD_COLOR : cv::IMREAD_GRAYSCALE));
 
+	int a = img.channels();
+	
 	if (img.data == NULL)
 		if (curImg_.data != NULL)
 		{
@@ -404,27 +449,54 @@ void FakeCamera::getImg() const throw (error_code)
 		else
 			throw error_code(CONTROLLER_ERROR, "Could not find image '" + path + "'. Please specify a valid path mask (format: ?? for focus stage, ?[name] for any stage, and ?{prec}[name]/?{prec}? for precision other than 0)");
 
-	if (img.elemSize() != byteCount_)
-		img.convertTo(img, byteCount_ == 1 ? CV_8U : CV_16U, scaleFac(img.elemSize(), byteCount_));
+	img.convertTo(img, type_, scaleFac(img.elemSize() / img.channels(), byteCount_));
 
-	if (img.cols != width_ || img.rows != height_)
+	bool dimChanged = img.cols != width_ || img.rows != height_;
+
+	if (dimChanged)
 		if (capturing_)
 		{
 			lastFailedPath_ = path;
 			lastFailedImg_ = img;
 			throw error_code(DEVICE_CAMERA_BUSY_ACQUIRING);
 		}
-		else
-		{
-			curPath_ = path;
-			curImg_ = img;
 
-			initSize_ = false;
-			initSize(false);
+	if (color_)
+	{
+		if (alphaChannel_.rows != img.rows || alphaChannel_.cols != img.cols || alphaChannel_.depth() != img.depth())
+		{
+			alphaChannel_ = cv::Mat(img.rows, img.cols, byteCount_ == 2 ? CV_16U : CV_8U);
+			alphaChannel_ = 1 << (8 * byteCount_);
 		}
 
+		if (dimChanged)
+			curImg_ = cv::Mat(img.rows, img.cols, type_);
+
+		int fromTo[] = { 0,0 , 1,1 , 2,2 , 3,3 };
+		cv::Mat from[] = { img, alphaChannel_ };
+
+		cv::mixChannels(from, 2, &curImg_, 1, fromTo, 4);
+	}
+	else
+		curImg_ = img;
+
 	curPath_ = path;
-	curImg_ = img;
+
+	if (dimChanged)
+	{ 
+		initSize_ = false;
+		initSize(false);
+	}
+
+	updateROI();
+}
+
+void FakeCamera::updateROI() const
+{
+	roi_ = curImg_(cv::Range(roiY_, roiY_ + roiHeight_), cv::Range(roiX_, roiX_ + roiWidth_));
+
+	if (!roi_.isContinuous())
+		roi_ = roi_.clone();
 }
 
 void FakeCamera::initSize(bool loadImg) const
@@ -449,4 +521,13 @@ void FakeCamera::initSize(bool loadImg) const
 
 		initSize_ = false;
 	}
+}
+
+void FakeCamera::resetCurImg()
+{
+	initSize_ = false;
+	curPath_ = "";
+	curImg_ = cv::Mat(0, 0, type_, NULL, 0);
+	roiWidth_ = width_ = 0;
+	roiHeight_ = height_ = 0;	
 }

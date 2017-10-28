@@ -13,7 +13,10 @@
 #include "error_code.h"
 
 extern const char* cameraName;
-extern const char* g_None;
+extern const char* label_CV_8U;
+extern const char* label_CV_16U;
+extern const char* label_CV_8UC4;
+extern const char* label_CV_16UC4;
 
 class FakeCamera : public CCameraBase<FakeCamera>
 {
@@ -44,11 +47,15 @@ public:
 	int StopSequenceAcquisition();
 	void OnThreadExiting() throw();
 
+	unsigned GetNumberOfComponents() const;
+	const unsigned int* GetImageBufferAsRGB32();
+
 	int OnPath(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnPixelType(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 	std::string buildPath() const throw(error_code);
 	void getImg() const throw (error_code);
+	void updateROI() const;
 
 	void initSize(bool loadImg = true) const;
 
@@ -61,7 +68,9 @@ private:
 	mutable bool initSize_;
 	mutable unsigned width_;
 	mutable unsigned height_;
-	mutable unsigned byteCount_;
+	unsigned byteCount_;
+	unsigned type_;
+	bool color_;
 
 	mutable unsigned roiX_;
 	mutable unsigned roiY_;
@@ -71,10 +80,13 @@ private:
 	cv::Mat emptyImg;
 
 	mutable cv::Mat curImg_;
+	mutable cv::Mat alphaChannel_;
 	mutable cv::Mat lastFailedImg_;
-	cv::Mat roi_;
+	mutable cv::Mat roi_;
 	mutable std::string curPath_;
 	mutable std::string lastFailedPath_;
+
+	void resetCurImg();
 
 	double exposure_;
 };
