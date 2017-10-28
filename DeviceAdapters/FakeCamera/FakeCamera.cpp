@@ -434,9 +434,7 @@ void FakeCamera::getImg() const throw (error_code)
 		return;
 
 	cv::Mat img = path == lastFailedPath_ ? lastFailedImg_ : cv::imread(path, cv::IMREAD_ANYDEPTH | (color_ ? cv::IMREAD_COLOR : cv::IMREAD_GRAYSCALE));
-
-	int a = img.channels();
-	
+		
 	if (img.data == NULL)
 		if (curImg_.data != NULL)
 		{
