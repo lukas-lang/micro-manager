@@ -2,8 +2,6 @@
 
 #include "boost/algorithm/string/replace.hpp"
 
-#include "Util.h"
-
 const char* cameraName = "FakeCamera";
 
 const char* label_CV_8U = "8bit";
