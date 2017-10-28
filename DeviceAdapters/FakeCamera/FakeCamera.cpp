@@ -37,6 +37,11 @@ FakeCamera::FakeCamera() :
 	// binning
 	CreateProperty(MM::g_Keyword_Binning, "1", MM::Integer, false);
 
+	std::vector<std::string> binningValues;
+	binningValues.push_back("1");
+
+	SetAllowedValues(MM::g_Keyword_Binning, binningValues);
+
 	CreateStringProperty(MM::g_Keyword_PixelType, label_CV_8U, false, new CPropertyAction(this, &FakeCamera::OnPixelType));
 
 	std::vector<std::string> pixelTypeValues;
