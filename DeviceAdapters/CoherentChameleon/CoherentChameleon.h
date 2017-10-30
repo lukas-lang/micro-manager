@@ -2,6 +2,7 @@
 
 #include <string>
 #include <vector>
+#include <map>
 
 #include "../../MMDevice/MMDevice.h"
 #include "../../MMDevice/DeviceBase.h"
@@ -56,6 +57,12 @@ public:
 	std::string QueryParameter(std::string param, bool checkError = true) throw (error_code);
 	std::string SetParameter(std::string param, std::string value, bool checkError = true) throw (error_code);
 
+	long MapIntProperty(std::string token, std::string description, int lower = -1, int upper = -1);
+	long MapProperty(std::string token, std::string description, bool readOnly = false, MM::PropertyType propType = MM::String);
+	long MapTriggerProperty(std::string token, std::string description, std::string actionName = "Start");
+	void SetNamedProperty(long id, std::vector<std::string> names);
+	int OnProperty(MM::PropertyBase* pProp, MM::ActionType eAct, long data);
+	int OnTrigger(MM::PropertyBase* pProp, MM::ActionType eAct, long data);
 
 	void initLimits();
 
@@ -70,6 +77,11 @@ private:
    std::string name_;
    int error_;
    MM::MMTime changedTime_;
+
+   typedef std::pair<std::string, std::string> prop_data;
+
+   std::vector<prop_data> properties_;
+   std::map<long, std::vector<std::string>> valueNames_;
 
    // todo move these to DevImpl for better data hiding
    const std::string queryToken_;
