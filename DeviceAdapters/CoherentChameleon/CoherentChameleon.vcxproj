@@ -204,12 +204,14 @@
   <ItemGroup>
     <ClCompile Include="CoherentChameleon.cpp" />
     <ClCompile Include="error_code.cpp" />
+    <ClCompile Include="fault_codes.cpp" />
     <ClCompile Include="module.cpp" />
     <ClCompile Include="Util.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CoherentChameleon.h" />
     <ClInclude Include="error_code.h" />
+    <ClInclude Include="fault_codes.h" />
     <ClInclude Include="Util.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

@@ -10,6 +10,7 @@
 
 #include "CoherentChameleon.h"
 #include "Util.h"
+#include "fault_codes.h"
 
 // Controller
 const char* g_Keyword_PowerSetpoint = "PowerSetpoint";
@@ -182,7 +183,9 @@ int CoherentChameleon::Initialize()
 	MapProperty("RH", "Relative humidity (%)", true, MM::Float);
 	MapProperty("SN", "Serial number", true);
 	MapProperty("ST", "Operating status", true);
-	//TODO: Fault and Fault history
+
+	CreateProperty("Active faults", "No faults", MM::String, false, new CPropertyActionEx(this, &CoherentChameleon::OnFaults, 0));
+	CreateProperty("Fault history", "No faults", MM::String, false, new CPropertyActionEx(this, &CoherentChameleon::OnFaults, 1));
 
 	//MapReadOnlyProperty();
 
@@ -335,6 +338,34 @@ void CoherentChameleon::initLimits()
 	val = QueryParameter(maxPowerToken_);
 	maxlp_ = (atof(val.c_str()) * 1000);
 }
+
+std::vector<std::string> CoherentChameleon::GetFaults(bool history)
+{
+	std::vector<std::string> faults;
+
+	std::istringstream iss(QueryParameter(history ? "FH" : "F"));
+
+	std::string fault;
+
+	while (std::getline(iss, fault, '&'))
+		faults.push_back(fault_codes.at(stoi(fault)));
+
+	return faults;
+}
+
+int CoherentChameleon::OnFaults(MM::PropertyBase* pProp, MM::ActionType eAct, long history)
+{
+ERRH_START
+	if (eAct == MM::BeforeGet || eAct == MM::AfterSet)
+	{
+		std::vector<std::string> faults = GetFaults(history);
+
+		SetAllowedValues(history ? "Active faults" : "Fault history", faults);
+		pProp->Set(faults.size() > 0 ? "Click to expand" : "No faults");
+	}
+ERRH_END
+}
+
 /////////////////////////////////////////////
 // Property Generators
 /////////////////////////////////////////////

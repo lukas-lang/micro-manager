@@ -64,6 +64,9 @@ public:
 	int OnProperty(MM::PropertyBase* pProp, MM::ActionType eAct, long data);
 	int OnTrigger(MM::PropertyBase* pProp, MM::ActionType eAct, long data);
 
+	std::vector<std::string> GetFaults(bool history);
+	int OnFaults(MM::PropertyBase* pProp, MM::ActionType eAct, long history);
+
 	void initLimits();
 
 	double minlp_;
