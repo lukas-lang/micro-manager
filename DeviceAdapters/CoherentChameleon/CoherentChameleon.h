@@ -17,7 +17,7 @@
 
 #include  "error_code.h"
 
-#define POWERCONVERSION              1000 //convert the power into mW from the W it wants the commands in
+extern const char* g_device_name;
 
 class CoherentChameleon : public CShutterBase<CoherentChameleon>
 {
@@ -42,16 +42,6 @@ public:
 	// action interface
 	// ----------------
 	int OnPort(MM::PropertyBase* pProp, MM::ActionType eAct);
-	int OnPowerSetpoint(MM::PropertyBase* pProp, MM::ActionType eAct, long index);
-	int OnPowerReadback(MM::PropertyBase* pProp, MM::ActionType eAct, long index);
-	int OnState(MM::PropertyBase* pProp, MM::ActionType eAct);
-
-	// some important read-only properties
-	int OnHeadID(MM::PropertyBase* pProp, MM::ActionType eAct);
-	int OnHeadUsageHours(MM::PropertyBase* pProp, MM::ActionType eAct);
-	int OnMinimumLaserPower(MM::PropertyBase* pProp, MM::ActionType eAct);
-	int OnMaximumLaserPower(MM::PropertyBase* pProp, MM::ActionType eAct);
-	int OnWaveLength(MM::PropertyBase* pProp, MM::ActionType eAct/*, long*/);
 
 	std::string SendCommand(std::string cmd, bool checkError = true) throw (error_code);
 	std::string QueryParameter(std::string param, bool checkError = true) throw (error_code);
@@ -66,64 +56,14 @@ public:
 
 	std::vector<std::string> GetFaults(bool history);
 	int OnFaults(MM::PropertyBase* pProp, MM::ActionType eAct, long history);
-
-	void initLimits();
-
-	double minlp_;
-	double maxlp_;
-
-   const std::string currentIOBuffer() { return buf_string_; }
   
 private:
    bool initialized_;
-   long state_;
-   std::string name_;
-   int error_;
-   MM::MMTime changedTime_;
 
    typedef std::pair<std::string, std::string> prop_data;
 
    std::vector<prop_data> properties_;
    std::map<long, std::vector<std::string>> valueNames_;
-
-   // todo move these to DevImpl for better data hiding
-   const std::string queryToken_;
-   const std::string powerSetpointToken_;
-   const std::string powerReadbackToken_;
-   const std::string CDRHToken_;  // if this is on, laser delays 5 SEC before turning on
-   const std::string CWToken_;
-   const std::string laserOnToken_;
-   const std::string TECServoToken_;
-   const std::string headSerialNoToken_;
-   const std::string headUsageHoursToken_;
-   const std::string wavelengthToken_;
-   const std::string externalPowerControlToken_;
-   const std::string maxPowerToken_;
-   const std::string minPowerToken_;
-
+   
    std::string port_;
-
-   std::string buf_string_;
-
-
-   void SetPowerSetpoint(double powerSetpoint__, double& achievedSetpoint__);
-   void GetPowerSetpoint(double& powerSetpoint__);
-   void GetPowerReadback(double& value__);
-
-   void GeneratePowerProperties();
-   void GeneratePropertyState();
-
-   void GenerateReadOnlyIDProperties();
-
-   void SetState(long state);
-   void GetState(long &state);
-
-   void GetExternalLaserPowerControl(int& control__);
-   void SetExternalLaserPowerControl(int control__);
-
-   // todo -- can move these to the implementation
-   void Send(std::string cmd);
-   int ReceiveOneLine();
-   void Purge();
-   int HandleErrors();
 };
