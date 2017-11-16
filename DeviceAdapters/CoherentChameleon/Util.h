@@ -23,6 +23,7 @@
 #pragma once
 
 #include <string>
+#include <sstream>
 #include <vector>
 #include <map>
 
@@ -32,6 +33,15 @@ std::string to_string(const T& expr)
 	std::ostringstream os;
 	os << expr;
 	return os.str();
+}
+
+template <typename T>
+T from_string(const std::string& str)
+{
+	std::istringstream is(str);
+	T ret;
+	is >> ret;
+	return ret;
 }
 
 template <typename T>
@@ -52,20 +62,40 @@ struct fixtype<const char[n]>
 	typedef std::string type;
 };
 
+template <>
+inline std::string to_string<std::string>(const std::string& expr)
+{
+	return expr;
+}
+
+template <>
+inline std::string from_string<std::string>(const std::string& str)
+{
+	return str;
+}
+
 template <typename T>
 struct vector_of_ : public std::vector<T>
 {
-	vector_of_<T>& operator()(const T& t)
+	vector_of_() {}
+
+	template <typename U>
+	vector_of_(const U& u)
+	{
+		(*this)(u);
+	}
+
+	vector_of_& operator()(const T& t)
 	{
 		this->push_back(t);
 		return *this;
 	}
-}; 
+};
 
 template <typename T>
 vector_of_<typename fixtype<T>::type> vector_of(const T& t)
 {
-	return vector_of_<typename fixtype<T>::type>()(t);
+	return t;
 }
 
 template <typename K, typename V>

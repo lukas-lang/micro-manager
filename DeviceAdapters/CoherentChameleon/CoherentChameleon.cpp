@@ -83,52 +83,52 @@ void CoherentChameleon::GetName(char* name) const
 int CoherentChameleon::Initialize()
 {
 ERRH_START
-	SetParameter("ECHO", "0", false);
-	SetParameter("PROMPT", "0", false);
+	SendCommand("ECHO=0", false);
+	SendCommand("PROMPT=0", false);
 
 	std::vector<std::string>
 		offOn = vector_of("Off")("On"),
 		disEn = vector_of("Disabled")("Enabled"),
 		olsf = vector_of("Open")("Locked")("Seeking")("Fault");
 	
-	SetNamedProperty(MapProperty("LBO HEATER", "Enable LBO heater"), offOn);
-	SetNamedProperty(MapProperty("SEARCH MODELOCK", "Search for modelock"), disEn);
-	SetNamedProperty(MapProperty("SHUTTER", "Shutter"), vector_of("Closed")("Open"));
+	SetPropertyNames(MapProperty("LBO HEATER", "Enable LBO heater"), offOn);
+	SetPropertyNames(MapProperty("SEARCH MODELOCK", "Search for modelock"), disEn);
+	SetPropertyNames(MapProperty("SHUTTER", "Shutter"), vector_of("Closed")("Open"));
 
 	MapProperty("TUNING LIMIT MIN", "Minimum wavelength", true, MM::Float);
 	MapProperty("TUNING LIMIT MAX", "Maximum wavelength", true, MM::Float);
-	MapIntProperty("WAVELENGTH", "Wavelength", stoi(QueryParameter("TUNING LIMIT MIT")), stoi(QueryParameter("TUNING LIMIT MAX")));
+	MapNumProperty("WAVELENGTH", "Wavelength", stoi(QueryParameter("TUNING LIMIT MIT")), stoi(QueryParameter("TUNING LIMIT MAX")), MM::Float);
 
 	MapTriggerProperty("FLASH", "Flash Verdi laser output below threshold to recenter mode");
 	MapTriggerProperty("LBO OPTIMIZE", "Begin LBO optimization routine");
 	MapTriggerProperty("HOME STEPPER", "Home the tuning motor (takes 3-30s)");
 	MapTriggerProperty("RECOVERY", "Initiate recovery (takes up to 2min)");
 
-	SetNamedProperty(MapIntProperty("ALIGN", "Alignment mode"), disEn);
-	MapIntProperty("ALIGNP", "Alignment mode power (mW)", true, MM::Float);
-	MapIntProperty("ALIGNW", "Alignment mode wavelength (nm)", true, MM::Float);
+	SetPropertyNames(MapProperty("ALIGN", "Alignment mode"), disEn);
+	MapProperty("ALIGNP", "Alignment mode power (mW)", true, MM::Float);
+	MapProperty("ALIGNW", "Alignment mode wavelength (nm)", true, MM::Float);
 
 	int laserId = MapProperty("LASER", "Laser status", true);
-	SetNamedProperty(laserId, offOn);
-	valueNames_[laserId] = vector_of("Off")("On")("Off due to fault"); //Set name for state 2 without allowing it to be set manually
+	SetPropertyNames(laserId, vector_of("Off")("On")("Off due to fault"));
+	SetAllowedValues("LASER", offOn); //Set name for state 2 without allowing it to be set manually
 
-	SetNamedProperty(MapProperty("KEYSWITCH", "Keyswitch status", true), offOn);
+	SetPropertyNames(MapProperty("KEYSWITCH", "Keyswitch status", true), offOn);
 
 	MapProperty("UF POWER", "Actual UF (Chameleon) power (mW)", true, MM::Float);
 	MapProperty("CAVITY PEAK HOLD", "Cavity peak hold status", true);
-	SetNamedProperty(MapProperty("CAVITY PZT MODE", "Cavity PZT mode", true), vector_of("Auto")("Manual"));
+	SetPropertyNames(MapProperty("CAVITY PZT MODE", "Cavity PZT mode", true), vector_of("Auto")("Manual"));
 	MapProperty("CAVITY PZT X", "Cavity PZT X (Rd) voltage (V)", true, MM::Float);
 	MapProperty("CAVITY PZT Y", "Cavity PZT Y (Rd) voltage (V)", true, MM::Float);
-	SetNamedProperty(MapProperty("PUMP PEAK HOLD", "Pump peak hold status", true), offOn);
-	SetNamedProperty(MapProperty("PUMP PZT MODE", "Pump PZT mode", true), vector_of("Auto")("Manual"));
+	SetPropertyNames(MapProperty("PUMP PEAK HOLD", "Pump peak hold status", true), offOn);
+	SetPropertyNames(MapProperty("PUMP PZT MODE", "Pump PZT mode", true), vector_of("Auto")("Manual"));
 	MapProperty("PUMP PZT X", "Pump PZT X (Rd) voltage (V)", true, MM::Float);
 	MapProperty("PUMP PZT Y", "Pump PZT Y (Rd) voltage (V)", true, MM::Float);
-	SetNamedProperty(MapProperty("POWER TRACK", "PowerTrack state", true), offOn);
-	SetNamedProperty(MapProperty("MODELOCKED", "Chameleon Ultra state", true), vector_of("Off (Standby)")("Modelocked")("CW"));
+	SetPropertyNames(MapProperty("POWER TRACK", "PowerTrack state", true), offOn);
+	SetPropertyNames(MapProperty("MODELOCKED", "Chameleon Ultra state", true), vector_of("Off (Standby)")("Modelocked")("CW"));
 	MapProperty("PUMP SETTING", "Pump power setpoint (fraction of QS to CW pump band)", true, MM::Float);
-	SetNamedProperty(MapProperty("TUNING STATUS", "Tuning state", true), vector_of("Ready")("Tuning in progress")("Searching for modelock")("Recovery operation in progress"));
-	SetNamedProperty(MapProperty("SEARCH MODELOCK", "Modelock search status", true), disEn);
-	SetNamedProperty(MapProperty("HOMED", "Tuning motor homing status", true), vector_of("Has not been homed")("Has been homed"));
+	SetPropertyNames(MapProperty("TUNING STATUS", "Tuning state", true), vector_of("Ready")("Tuning in progress")("Searching for modelock")("Recovery operation in progress"));
+	SetPropertyNames(MapProperty("SEARCH MODELOCK", "Modelock search status", true), disEn);
+	SetPropertyNames(MapProperty("HOMED", "Tuning motor homing status", true), vector_of("Has not been homed")("Has been homed"));
 	MapProperty("STEPPER POSITION", "Stepper motor position (counts)", true, MM::Integer);
 	MapProperty("CURRENT", "Average diode current (A)", true, MM::Float);
 	MapProperty("DIODE1 CURRENT", "Diode #1 current (A)", true, MM::Float);
@@ -151,12 +151,12 @@ ERRH_START
 	MapProperty("ETALON TEMP DRIVE", "Etalon temperature servo drive setting", true);
 	MapProperty("DIODE1 HEATSINK TEMP", "Diode #1 heat sink temperature (°C)", true, MM::Float);
 	MapProperty("DIODE2 HEATSINK TEMP", "Diode #2 heat sink temperature (°C)", true, MM::Float);
-	SetNamedProperty(MapProperty("LIGHT REG STATUS", "Light loop status", true), olsf);
-	SetNamedProperty(MapProperty("DIODE1 SERVO STATUS", "Diode #1 temperature servo status", true), olsf);
-	SetNamedProperty(MapProperty("DIODE2 SERVO STATUS", "Diode #2 temperature servo status", true), olsf);
-	SetNamedProperty(MapProperty("VANADATE SERVO STATUS", "Vanadate temperature servo status", true), olsf);
-	SetNamedProperty(MapProperty("LBO SERVO STATUS", "LBO temperature servo status", true), olsf);
-	SetNamedProperty(MapProperty("ETALON SERVO STATUS", "Etalon temperature servo status", true), olsf);
+	SetPropertyNames(MapProperty("LIGHT REG STATUS", "Light loop status", true), olsf);
+	SetPropertyNames(MapProperty("DIODE1 SERVO STATUS", "Diode #1 temperature servo status", true), olsf);
+	SetPropertyNames(MapProperty("DIODE2 SERVO STATUS", "Diode #2 temperature servo status", true), olsf);
+	SetPropertyNames(MapProperty("VANADATE SERVO STATUS", "Vanadate temperature servo status", true), olsf);
+	SetPropertyNames(MapProperty("LBO SERVO STATUS", "LBO temperature servo status", true), olsf);
+	SetPropertyNames(MapProperty("ETALON SERVO STATUS", "Etalon temperature servo status", true), olsf);
 	MapProperty("DIODE1 HOURS", "Diode #1 operating time (h)", true, MM::Float);
 	MapProperty("DIODE2 HOURS", "Diode #2 operating time (h)", true, MM::Float);
 	MapProperty("HEAD HOURS", "Head operating time (h)", true, MM::Float);
@@ -164,7 +164,7 @@ ERRH_START
 	MapProperty("DIODE2 VOLTAGE", "Diode #2 voltage (V)", true, MM::Float);
 	MapProperty("SOFTWARE", "Power supply software version", true);
 	MapProperty("BAT VOLTS", "Battery voltage (V)", true, MM::Float);
-	SetNamedProperty(MapProperty("AUTOMODELOCK", "Automodelock routing status", true), disEn);
+	SetPropertyNames(MapProperty("AUTOMODELOCK", "Automodelock routing status", true), disEn);
 	MapProperty("PZT CONTROL STATE", "PZT control state", true);
 
 	MapProperty("PZTXCM", "Last power map result for cavity X PZT position (% of available range)", true, MM::Float);
@@ -212,104 +212,13 @@ std::string CoherentChameleon::SendCommand(std::string cmd, bool checkError) thr
 	return answer;
 }
 
-std::string CoherentChameleon::QueryParameter(std::string param, bool checkError) throw (error_code)
+std::string CoherentChameleon::QueryParameter(std::string param) throw (error_code)
 {
-	return SendCommand("?" + param, checkError);
+	return SendCommand("?" + param);
 }
-std::string CoherentChameleon::SetParameter(std::string param, std::string value, bool checkError) throw (error_code)
+void CoherentChameleon::SetParameter(std::string param, std::string value) throw (error_code)
 {
-	SendCommand(param + "=" + value, checkError);
-
-	return QueryParameter(param, checkError);
-}
-
-long CoherentChameleon::MapIntProperty(std::string token, std::string description, int lower, int upper)
-{
-	long id = MapProperty(token, description);
-	
-	if (lower != upper)
-		SetPropertyLimits(description.c_str(), lower, upper);
-
-	return id;
-}
-
-long CoherentChameleon::MapProperty(std::string token, std::string description, bool readOnly, MM::PropertyType propType)
-{
-	std::string val = QueryParameter(token);
-
-	properties_.push_back(prop_data(token, description));
-	long id = properties_.size() - 1;
-	CreateProperty(description.c_str(), val.c_str(), propType, readOnly, new CPropertyActionEx(this, &CoherentChameleon::OnProperty, id));
-
-	return id;
-}
-
-long CoherentChameleon::MapTriggerProperty(std::string token, std::string description, std::string actionName)
-{
-	properties_.push_back(prop_data(token, description));
-	long id = properties_.size() - 1;
-	CreateProperty(description.c_str(), "-", MM::String, false, new CPropertyActionEx(this, &CoherentChameleon::OnTrigger, id));
-	SetAllowedValues(description.c_str(), vector_of("-")(actionName));
-
-	return id;
-}
-
-void CoherentChameleon::SetNamedProperty(long id, std::vector<std::string> names)
-{
-	valueNames_[id] = names;
-	SetAllowedValues(properties_[id].second.c_str(), names);
-}
-
-int CoherentChameleon::OnProperty(MM::PropertyBase* pProp, MM::ActionType eAct, long data)
-{
-ERRH_START
-	std::string val;
-
-	switch (eAct)
-	{
-	case MM::BeforeGet:
-		val = QueryParameter(properties_[data].first);
-
-		if (valueNames_.find(data) != valueNames_.end())
-		{
-			val = valueNames_[data][atoi(val.c_str())];
-		}
-		pProp->Set(val.c_str());
-		break;
-	case MM::AfterSet:
-		pProp->Get(val);
-
-		if (valueNames_.find(data) != valueNames_.end())
-		{
-			std::vector<std::string> names = valueNames_[data];
-			val = to_string(find(names.begin(), names.end(), val) - names.begin());
-		}
-
-		SetParameter(properties_[data].first, val);
-		break;
-	}
-ERRH_END
-}
-
-int CoherentChameleon::OnTrigger(MM::PropertyBase * pProp, MM::ActionType eAct, long data)
-{
-ERRH_START
-	std::string val;
-
-	switch (eAct)
-	{
-	case MM::BeforeGet:
-
-		pProp->Set("-");
-		break;
-	case MM::AfterSet:
-		pProp->Get(val);
-
-		if (val != "-")
-			SetParameter(properties_[data].first, "1");
-		break;
-	}
-ERRH_END
+	SendCommand(param + "=" + value);
 }
 
 std::vector<std::string> CoherentChameleon::GetFaults(bool history)
