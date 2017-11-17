@@ -215,7 +215,7 @@ inline DeviceUtil<T, U>::~DeviceUtil()
 template<typename T, typename U>
 inline long DeviceUtil<T, U>::MapNumProperty(PropertyAccessorWrapper propAcc, std::string description, double lower, double upper, MM::PropertyType propType)
 {
-	long id = MapProperty(propAcc, description, propType);
+	long id = MapProperty(propAcc, description, false, propType);
 
 	SetPropertyLimits(description.c_str(), lower, upper);
 
