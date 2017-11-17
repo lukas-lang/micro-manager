@@ -65,13 +65,14 @@ CoherentChameleon::~CoherentChameleon()
 bool CoherentChameleon::Busy()
 {
 	ERRH_START
-		return QueryParameter(TUNING_STATUS) != "0"
+		return QueryParameter(LASER) == "On"
+		&& (QueryParameter(TUNING_STATUS) != "0"
 		|| QueryParameter(LIGHT_REG_STATUS) == "2"
 		|| QueryParameter(DIODE1_SERVO_STATUS) == "2"
 		|| QueryParameter(DIODE2_SERVO_STATUS) == "2"
 		|| QueryParameter(VANADATE_SERVO_STATUS) == "2"
 		|| QueryParameter(LBO_SERVO_STATUS) == "2"
-		|| QueryParameter(ETALON_SERVO_STATUS) == "2";
+		|| QueryParameter(ETALON_SERVO_STATUS) == "2");
 	ERRH_END
 }
 
