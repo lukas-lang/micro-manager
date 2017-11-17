@@ -44,5 +44,11 @@
     <ClInclude Include="fault_codes.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="DeviceUtil.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="commands.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
