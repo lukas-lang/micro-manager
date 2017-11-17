@@ -124,7 +124,7 @@ int CoherentChameleon::Initialize()
 	SetPropertyNames(MapProperty(PUMP_PZT_MODE, "Pump PZT mode", true), vector_of("Auto")("Manual"));
 	MapProperty(PUMP_PZT_X, "Pump PZT X (Rd) voltage (V)", true, MM::Float);
 	MapProperty(PUMP_PZT_Y, "Pump PZT Y (Rd) voltage (V)", true, MM::Float);
-	SetPropertyNames(MapProperty(POWER_TRACK, "PowerTrack state", true), offOn);
+	//SetPropertyNames(MapProperty(POWER_TRACK, "PowerTrack state", true), offOn); //TODO: Fix command
 	SetPropertyNames(MapProperty(MODELOCKED, "Chameleon Ultra state", true), vector_of("Off (Standby)")("Modelocked")("CW"));
 	MapProperty(PUMP_SETTING, "Pump power setpoint (fraction of QS to CW pump band)", true, MM::Float);
 	SetPropertyNames(MapProperty(TUNING_STATUS, "Tuning state", true), vector_of("Ready")("Tuning in progress")("Searching for modelock")("Recovery operation in progress"));
@@ -166,7 +166,7 @@ int CoherentChameleon::Initialize()
 	MapProperty(SOFTWARE, "Power supply software version", true);
 	MapProperty(BAT_VOLTS, "Battery voltage (V)", true, MM::Float);
 	SetPropertyNames(MapProperty(AUTOMODELOCK, "Automodelock routing status", true), disEn);
-	MapProperty(PZT_CONTROL_STATE, "PZT control state", true);
+	//MapProperty(PZT_CONTROL_STATE, "PZT control state", true); //TODO: Fix command
 
 	MapProperty(PZTXCM, "Last power map result for cavity X PZT position (% of available range)", true, MM::Float);
 	MapProperty(PZTXCP, "Current cavity X PZT position (% of available range)", true, MM::Float);
@@ -202,11 +202,11 @@ std::string CoherentChameleon::SendCommand(std::string cmd, bool checkError) thr
 
 	if (checkError)
 	{
-		if (answer.substr(0, 11) == "RANGE ERROR")
+		if (answer.substr(0, 12) == " RANGE ERROR")
 			throw error_code(CONTROLLER_ERROR, "Parameter out of range: " + answer.substr(11));
-		if (answer.substr(0, 13) == "Command Error")
+		if (answer.substr(0, 14) == " Command Error")
 			throw error_code(CONTROLLER_ERROR, "Illegal instruction: " + answer.substr(13));
-		if (answer.substr(0, 11) == "Query Error")
+		if (answer.substr(0, 12) == " Query Error")
 			throw error_code(CONTROLLER_ERROR, "Illegal instruction: " + answer.substr(11));
 	}
 
