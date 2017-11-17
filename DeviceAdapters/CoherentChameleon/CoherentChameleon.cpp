@@ -231,7 +231,7 @@ std::vector<std::string> CoherentChameleon::GetFaults(bool history)
 	std::string fault;
 
 	while (std::getline(iss, fault, '&'))
-		faults.push_back(fault_codes.at(stoi(fault)));
+		faults.push_back(fault_codes.at(fault));
 
 	return faults;
 }

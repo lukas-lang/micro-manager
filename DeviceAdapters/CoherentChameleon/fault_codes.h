@@ -25,4 +25,4 @@
 #include <string>
 #include <map>
 
-extern const std::map<int, std::string> fault_codes;
+extern const std::map<std::string, std::string> fault_codes;
