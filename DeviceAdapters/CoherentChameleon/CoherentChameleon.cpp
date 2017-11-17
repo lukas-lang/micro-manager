@@ -203,12 +203,12 @@ std::string CoherentChameleon::SendCommand(std::string cmd, bool checkError) thr
 
 	if (checkError)
 	{
-		if (answer.substr(0, 12) == " RANGE ERROR")
-			throw error_code(CONTROLLER_ERROR, "Parameter out of range: " + answer.substr(11));
+		if (answer.substr(0, 12) == "OUT OF RANGE")
+			throw error_code(CONTROLLER_ERROR, "Parameter out of range: " + answer.substr(12));
 		if (answer.substr(0, 14) == " Command Error")
-			throw error_code(CONTROLLER_ERROR, "Illegal instruction: " + answer.substr(13));
+			throw error_code(CONTROLLER_ERROR, "Illegal instruction: " + answer.substr(14));
 		if (answer.substr(0, 12) == " Query Error")
-			throw error_code(CONTROLLER_ERROR, "Illegal instruction: " + answer.substr(11));
+			throw error_code(CONTROLLER_ERROR, "Illegal instruction: " + answer.substr(12));
 	}
 
 	return answer;
