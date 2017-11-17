@@ -95,7 +95,7 @@ int CoherentChameleon::Initialize()
 
 	SetPropertyNames(MapProperty(LBO_HEATER, "Enable LBO heater"), offOn);
 	SetPropertyNames(MapProperty(SEARCH_MODELOCK, "Search for modelock"), disEn);
-	SetPropertyNames(MapProperty(SHUTTER, "Shutter"), vector_of("Closed")("Open"));
+	SetPropertyNames(MapProperty(SHUTTER, "Shutter", true), vector_of("Closed")("Open"));
 
 	MapProperty(TUNING_LIMIT_MIN, "Minimum wavelength", true, MM::Float);
 	MapProperty(TUNING_LIMIT_MAX, "Maximum wavelength", true, MM::Float);
@@ -289,7 +289,7 @@ int CoherentChameleon::OnPort(MM::PropertyBase* pProp, MM::ActionType eAct)
 int CoherentChameleon::SetOpen(bool open)
 {
 	ERRH_START
-		SetParameter(SHUTTER, open ? "1" : "0");
+		//SetParameter(SHUTTER, open ? "1" : "0");
 	ERRH_END
 }
 
