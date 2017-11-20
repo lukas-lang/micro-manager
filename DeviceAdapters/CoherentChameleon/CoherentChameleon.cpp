@@ -97,9 +97,9 @@ int CoherentChameleon::Initialize()
 	SetPropertyNames(MapProperty(SEARCH_MODELOCK, "Search for modelock"), disEn);
 	SetPropertyNames(MapProperty(SHUTTER, "Shutter", true), vector_of("Closed")("Open"));
 
-	MapProperty(TUNING_LIMIT_MIN, "Minimum wavelength", true, MM::Float);
-	MapProperty(TUNING_LIMIT_MAX, "Maximum wavelength", true, MM::Float);
-	MapNumProperty(WAVELENGTH, "Wavelength", stoi(QueryParameter(TUNING_LIMIT_MIN)), stoi(QueryParameter(TUNING_LIMIT_MAX)), MM::Float);
+	MapProperty(TUNING_LIMIT_MIN, "Minimum wavelength (nm)", true, MM::Float);
+	MapProperty(TUNING_LIMIT_MAX, "Maximum wavelength (nm)", true, MM::Float);
+	MapNumProperty(WAVELENGTH, "Wavelength (nm)", stoi(QueryParameter(TUNING_LIMIT_MIN)), stoi(QueryParameter(TUNING_LIMIT_MAX)));
 
 	MapTriggerProperty(FLASH, "Flash Verdi laser output below threshold to recenter mode");
 	MapTriggerProperty(LBO_OPTIMIZE, "Begin LBO optimization routine");
@@ -184,8 +184,20 @@ int CoherentChameleon::Initialize()
 	CreateProperty("Active faults", "No faults", MM::String, false, new CPropertyActionEx(this, &CoherentChameleon::OnFaults, 0));
 	CreateProperty("Fault history", "No faults", MM::String, false, new CPropertyActionEx(this, &CoherentChameleon::OnFaults, 1));
 
+	SetProperty("Wavelength (nm)", "800");
+
 	initialized_ = true;
 	ERRH_END
+}
+
+int CoherentChameleon::Shutdown()
+{
+	if (initialized_)
+	{
+		SetProperty("Wavelength (nm)", "800");
+		initialized_ = false;
+	}
+	return DEVICE_OK;
 }
 
 std::string CoherentChameleon::SendCommand(std::string cmd, bool checkError) throw (error_code)
@@ -249,15 +261,6 @@ int CoherentChameleon::OnFaults(MM::PropertyBase* pProp, MM::ActionType eAct, lo
 		}
 	ERRH_END
 }
-
-int CoherentChameleon::Shutdown()
-{
-	if (initialized_)
-		initialized_ = false;
-
-	return DEVICE_OK;
-}
-
 
 ///////////////////////////////////////////////////////////////////////////////
 // Action handlers
