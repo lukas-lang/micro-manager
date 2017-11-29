@@ -18,6 +18,9 @@
     <ClCompile Include="PM100USB.cpp">
       <Filter>Source files</Filter>
     </ClCompile>
+    <ClCompile Include="module.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="PM100USB.h">
