@@ -43,7 +43,8 @@ const char* g_device_name = "Coherent chameleon Ultra laser";
 // ~~~~~~~~~~~~~~~~~~~~
 
 CoherentChameleon::CoherentChameleon() :
-	initialized_(false)
+	initialized_(false),
+	enableShutterSetting_(false)
 {
 	InitializeDefaultErrorMessages();
 
@@ -56,6 +57,8 @@ CoherentChameleon::CoherentChameleon() :
 	// Port
 	CPropertyAction* pAct = new CPropertyAction(this, &CoherentChameleon::OnPort);
 	CreateProperty(MM::g_Keyword_Port, "Undefined", MM::String, false, pAct, true);
+
+	SetErrorText(ERR_SHUTTER_NOT_ENABLED, "Can't open shutter. Enable this setting first by setting 'Enable shutter setting' to 'Enable once'.");
 }
 
 CoherentChameleon::~CoherentChameleon()
@@ -95,7 +98,9 @@ int CoherentChameleon::Initialize()
 
 	SetPropertyNames(MapProperty(LBO_HEATER, "Enable LBO heater"), offOn);
 	SetPropertyNames(MapProperty(SEARCH_MODELOCK, "Search for modelock"), disEn);
-	SetPropertyNames(MapProperty(SHUTTER, "Shutter", true), vector_of("Closed")("Open"));
+	MapTriggerProperty(ref(enableShutterSetting_), "Enable shutter setting", "Enable once");
+	
+	SetPropertyNames(MapProperty(new ShutterSettingAccessor(), "Shutter"), vector_of("Closed")("Open"));
 
 	MapProperty(TUNING_LIMIT_MIN, "Minimum wavelength (nm)", true, MM::Float);
 	MapProperty(TUNING_LIMIT_MAX, "Maximum wavelength (nm)", true, MM::Float);
@@ -265,6 +270,22 @@ int CoherentChameleon::OnFaults(MM::PropertyBase* pProp, MM::ActionType eAct, lo
 ///////////////////////////////////////////////////////////////////////////////
 // Action handlers
 ///////////////////////////////////////////////////////////////////////////////
+
+
+std::string CoherentChameleon::ShutterSettingAccessor::QueryParameter(CoherentChameleon* inst)
+{
+	return inst->QueryParameter(SHUTTER);
+}
+
+void CoherentChameleon::ShutterSettingAccessor::SetParameter(CoherentChameleon* inst, std::string val)
+{
+	if (val == "0" || inst->enableShutterSetting_)
+		inst->SetParameter(SHUTTER, val);
+	else
+		throw error_code(ERR_SHUTTER_SETTING_NOT_ENABLED);
+
+	inst->enableShutterSetting_ = false;
+}
 
 int CoherentChameleon::OnPort(MM::PropertyBase* pProp, MM::ActionType eAct)
 {

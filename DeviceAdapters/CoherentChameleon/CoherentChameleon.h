@@ -36,8 +36,9 @@
 //////////////////////////////////////////////////////////////////////////////
 // Error codes
 //
-#define ERR_PORT_CHANGE_FORBIDDEN    10004
-#define ERR_DEVICE_NOT_FOUND         10005
+#define ERR_PORT_CHANGE_FORBIDDEN        10004
+#define ERR_DEVICE_NOT_FOUND             10005
+#define ERR_SHUTTER_SETTING_NOT_ENABLED  10006
 
 #include  "error_code.h"
 
@@ -45,7 +46,6 @@ extern const char* g_device_name;
 
 class CoherentChameleon : public DeviceUtil<CShutterBase<CoherentChameleon>, CoherentChameleon>
 {
-
 public:
 	CoherentChameleon();
 	~CoherentChameleon();
@@ -73,9 +73,18 @@ public:
 
 	std::vector<std::string> GetFaults(bool history);
 	int OnFaults(MM::PropertyBase* pProp, MM::ActionType eAct, long history);
-  
+
 private:
-   bool initialized_;
+    bool initialized_;
    
-   std::string port_;
+    std::string port_;
+
+	struct ShutterSettingAccessor : public PropertyAccessor
+	{
+		std::string QueryParameter(CoherentChameleon*);
+		void SetParameter(CoherentChameleon*, std::string);
+	};
+
+    bool enableShutterSetting_;
+    friend struct ShutterSettingAccessor;
 };
