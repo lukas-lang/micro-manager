@@ -376,6 +376,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "VisiTech_iSIM", "DeviceAdap
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MatrixVision", "DeviceAdapters\MatrixVision\MatrixVision.vcxproj", "{A982F985-EE25-434F-B9AF-E33C8A3AAC58}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "PM100USB", "DeviceAdapters\PM100USB\PM100USB.vcxproj", "{6088AAEF-B452-48FE-A131-C03FD8878759}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug EnC|Win32 = Debug EnC|Win32
@@ -2577,6 +2579,18 @@ Global
 		{A982F985-EE25-434F-B9AF-E33C8A3AAC58}.Release|Win32.Build.0 = Release|Win32
 		{A982F985-EE25-434F-B9AF-E33C8A3AAC58}.Release|x64.ActiveCfg = Release|x64
 		{A982F985-EE25-434F-B9AF-E33C8A3AAC58}.Release|x64.Build.0 = Release|x64
+		{6088AAEF-B452-48FE-A131-C03FD8878759}.Debug EnC|Win32.ActiveCfg = Debug EnC|Win32
+		{6088AAEF-B452-48FE-A131-C03FD8878759}.Debug EnC|Win32.Build.0 = Debug EnC|Win32
+		{6088AAEF-B452-48FE-A131-C03FD8878759}.Debug EnC|x64.ActiveCfg = Debug EnC|x64
+		{6088AAEF-B452-48FE-A131-C03FD8878759}.Debug EnC|x64.Build.0 = Debug EnC|x64
+		{6088AAEF-B452-48FE-A131-C03FD8878759}.Debug|Win32.ActiveCfg = Debug|Win32
+		{6088AAEF-B452-48FE-A131-C03FD8878759}.Debug|Win32.Build.0 = Debug|Win32
+		{6088AAEF-B452-48FE-A131-C03FD8878759}.Debug|x64.ActiveCfg = Debug|x64
+		{6088AAEF-B452-48FE-A131-C03FD8878759}.Debug|x64.Build.0 = Debug|x64
+		{6088AAEF-B452-48FE-A131-C03FD8878759}.Release|Win32.ActiveCfg = Release|Win32
+		{6088AAEF-B452-48FE-A131-C03FD8878759}.Release|Win32.Build.0 = Release|Win32
+		{6088AAEF-B452-48FE-A131-C03FD8878759}.Release|x64.ActiveCfg = Release|x64
+		{6088AAEF-B452-48FE-A131-C03FD8878759}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
