@@ -106,7 +106,7 @@ int CoherentChameleon::Initialize()
 	MapTriggerProperty(HOME_STEPPER, "Home the tuning motor (takes 3-30s)");
 	MapTriggerProperty(RECOVERY, "Initiate recovery (takes up to 2min)");
 
-	SetPropertyNames(MapProperty(ALIGN, "Alignment mode"), disEn);
+	SetPropertyNames(MapProperty(ALIGN, "Alignment mode", true), disEn);
 	MapProperty(ALIGNP, "Alignment mode power (mW)", true, MM::Float);
 	MapProperty(ALIGNW, "Alignment mode wavelength (nm)", true, MM::Float);
 
