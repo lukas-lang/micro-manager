@@ -138,6 +138,8 @@ int PM100USB::OnPower(MM::PropertyBase * pProp, MM::ActionType eAct)
 
 		pProp->Set(os.str().c_str());
 	}
+
+	return DEVICE_OK;
 }
 int PM100USB::OnWavelength(MM::PropertyBase * pProp, MM::ActionType eAct)
 {
