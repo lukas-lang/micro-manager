@@ -58,7 +58,7 @@ CoherentChameleon::CoherentChameleon() :
 	CPropertyAction* pAct = new CPropertyAction(this, &CoherentChameleon::OnPort);
 	CreateProperty(MM::g_Keyword_Port, "Undefined", MM::String, false, pAct, true);
 
-	SetErrorText(ERR_SHUTTER_NOT_ENABLED, "Can't open shutter. Enable this setting first by setting 'Enable shutter setting' to 'Enable once'.");
+	SetErrorText(ERR_SHUTTER_SETTING_NOT_ENABLED, "Can't open shutter. Enable this setting first by setting 'Enable shutter setting' to 'Enable once'.");
 }
 
 CoherentChameleon::~CoherentChameleon()
