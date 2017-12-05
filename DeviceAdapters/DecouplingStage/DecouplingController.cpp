@@ -112,8 +112,20 @@ ERRH_START
 		{
 			DecouplingStage* stage = dynamic_cast<DecouplingStage*>(GetDevice(stageLabel));
 
-			if (!stage || stage->getController() != this)
-				availableStages_.push_back(stageLabel);
+			if (!stage)
+			{
+				bool isOwn = false;
+
+				try
+				{
+					isOwn = stage->getController() != this;
+				}
+				catch (errorCode)
+				{}
+
+				if (!isOwn)
+					availableStages_.push_back(stageLabel);
+			}
 		}
 		else break;
 	}
