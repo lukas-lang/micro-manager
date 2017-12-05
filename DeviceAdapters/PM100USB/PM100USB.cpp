@@ -36,6 +36,7 @@ PM100USB::PM100USB() :
 
 	SetErrorText(ERR_DEVICE_CHANGE_FORBIDDEN, "Can't change device after the adapter has been initialized");
 	SetErrorText(ERR_COMMUNICATION, "Communication error occured");
+	SetErrorText(ERR_DEVICE_NOT_FOUND, "Could not connect to device");
 }
 
 bool PM100USB::Busy()
@@ -47,13 +48,19 @@ int PM100USB::Initialize()
 {
 	if (!initialized_)
 	{
-		PM100D_init(deviceID_, VI_OFF, VI_ON, &deviceHandle_);
-	
 		ViStatus err = VI_SUCCESS;
+		err = PM100D_init(deviceID_, VI_OFF, VI_ON, &deviceHandle_);
+	
+		if (err != VI_SUCCESS)
+			return ERR_DEVICE_NOT_FOUND;
+
 		ViChar sensor_name[PM100D_BUFFER_SIZE], serial_number[PM100D_BUFFER_SIZE], cal_message[PM100D_BUFFER_SIZE];
 		ViInt16 sens_type, sens_subtype, flags;
 
 		err = PM100D_getSensorInfo(deviceHandle_, sensor_name, serial_number, cal_message, &sens_type, &sens_subtype, &flags);
+
+		if (err != VI_SUCCESS)
+			return ERR_COMMUNICATION;
 
 		CreateProperty("Sensor name", sensor_name, MM::String, true);
 		CreateProperty("Serial number", serial_number, MM::String, true);
@@ -72,6 +79,7 @@ int PM100USB::Shutdown()
 {
 	if (initialized_)
 	{
+		PM100D_close(deviceHandle_);
 		initialized_ = false;
 	}
 

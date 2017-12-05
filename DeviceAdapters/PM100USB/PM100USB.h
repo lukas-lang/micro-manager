@@ -9,6 +9,7 @@ const extern char* device_name;
 
 #define ERR_DEVICE_CHANGE_FORBIDDEN 10001
 #define ERR_COMMUNICATION 10002
+#define ERR_DEVICE_NOT_FOUND 10003
 
 class PM100USB : public CGenericBase<PM100USB>
 {
