@@ -376,6 +376,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "VisiTech_iSIM", "DeviceAdap
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MatrixVision", "DeviceAdapters\MatrixVision\MatrixVision.vcxproj", "{A982F985-EE25-434F-B9AF-E33C8A3AAC58}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "DecouplingStage", "DeviceAdapters\DecouplingStage\DecouplingStage.vcxproj", "{F098F77E-6690-4D23-B417-B29B4A6BDDBB}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug EnC|Win32 = Debug EnC|Win32
@@ -2577,6 +2579,18 @@ Global
 		{A982F985-EE25-434F-B9AF-E33C8A3AAC58}.Release|Win32.Build.0 = Release|Win32
 		{A982F985-EE25-434F-B9AF-E33C8A3AAC58}.Release|x64.ActiveCfg = Release|x64
 		{A982F985-EE25-434F-B9AF-E33C8A3AAC58}.Release|x64.Build.0 = Release|x64
+		{F098F77E-6690-4D23-B417-B29B4A6BDDBB}.Debug EnC|Win32.ActiveCfg = Debug EnC|Win32
+		{F098F77E-6690-4D23-B417-B29B4A6BDDBB}.Debug EnC|Win32.Build.0 = Debug EnC|Win32
+		{F098F77E-6690-4D23-B417-B29B4A6BDDBB}.Debug EnC|x64.ActiveCfg = Debug EnC|x64
+		{F098F77E-6690-4D23-B417-B29B4A6BDDBB}.Debug EnC|x64.Build.0 = Debug EnC|x64
+		{F098F77E-6690-4D23-B417-B29B4A6BDDBB}.Debug|Win32.ActiveCfg = Debug|Win32
+		{F098F77E-6690-4D23-B417-B29B4A6BDDBB}.Debug|Win32.Build.0 = Debug|Win32
+		{F098F77E-6690-4D23-B417-B29B4A6BDDBB}.Debug|x64.ActiveCfg = Debug|x64
+		{F098F77E-6690-4D23-B417-B29B4A6BDDBB}.Debug|x64.Build.0 = Debug|x64
+		{F098F77E-6690-4D23-B417-B29B4A6BDDBB}.Release|Win32.ActiveCfg = Release|Win32
+		{F098F77E-6690-4D23-B417-B29B4A6BDDBB}.Release|Win32.Build.0 = Release|Win32
+		{F098F77E-6690-4D23-B417-B29B4A6BDDBB}.Release|x64.ActiveCfg = Release|x64
+		{F098F77E-6690-4D23-B417-B29B4A6BDDBB}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
