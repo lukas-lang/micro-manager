@@ -117,7 +117,7 @@ ERRH_START
 			if (stage)
 				try
 				{
-					isOwn = stage->getController() != this;
+					isOwn = stage->getController() == this;
 				}
 				catch (errorCode)
 				{}
