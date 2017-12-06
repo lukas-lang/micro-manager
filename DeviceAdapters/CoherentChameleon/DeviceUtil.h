@@ -76,6 +76,8 @@ public:
 	*/
 	struct PropertyAccessor
 	{
+		virtual ~PropertyAccessor();
+
 		virtual std::string QueryParameter(U*);
 		virtual void SetParameter(U*, std::string);
 	};
@@ -314,6 +316,10 @@ inline int DeviceUtil<T, U>::OnTrigger(MM::PropertyBase * pProp, MM::ActionType 
 	}
 	ERRH_END
 }
+
+template<typename T, typename U>
+inline DeviceUtil<T, U>::PropertyAccessor::~PropertyAccessor()
+{}
 
 template<typename T, typename U>
 inline std::string DeviceUtil<T, U>::PropertyAccessor::QueryParameter(U *)
