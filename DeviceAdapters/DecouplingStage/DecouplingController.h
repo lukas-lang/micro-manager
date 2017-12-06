@@ -45,6 +45,7 @@ private:
 	bool initialized_;
 
 	unsigned stageCount_;
+	bool normalize_;
 	std::vector<MM::Stage*> stages_;
 	std::vector<std::string> availableStages_;
 	Mat couplingMatrix_;

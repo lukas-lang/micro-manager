@@ -5,7 +5,8 @@ const char* controllerName = "Decoupling stage controller";
 
 DecouplingController::DecouplingController() :
 initialized_(false),
-stageCount_(0)
+stageCount_(0),
+normalize_(true)
 {
 	InitializeDefaultErrorMessages();
 	SetErrorText(INVALID_INPUT, "Invalid input specified");
@@ -16,6 +17,8 @@ stageCount_(0)
 	CreateProperty(MM::g_Keyword_Description, "Virtual stage controller to (de)couple stage movements", MM::String, true);
 
 	MapProperty(vref(stageCount_), "Coupled stage count", false, MM::Integer, true);
+
+	SetPropertyNames(MapProperty(vref(normalize_), "Normalize relative stage position when assigning to axis direction"), vector_of("No")("Yes"));
 }
 
 DecouplingController::~DecouplingController()
@@ -82,6 +85,8 @@ ERRH_START
 		{
 			if (val == "1")
 			{
+				Vec positions(inst->stageCount_, 0);
+
 				for (int i = 0; i < inst->stageCount_; ++i)
 				{
 					double pos;
@@ -91,8 +96,14 @@ ERRH_START
 
 					errorCode::ThrowErr(inst->stages_[i]->GetPositionUm(pos), inst->stages_[i]);
 
-					inst->couplingMatrix_(i, idx) = pos - (rel ? inst->couplingMatrix_(i, inst->stageCount_) : 0);
+					positions(i) = pos - (rel ? inst->couplingMatrix_(i, inst->stageCount_) : 0);
 				}
+
+				if (rel && inst->normalize_)
+					positions /= norm_2(positions);
+				
+				for (int i = 0; i < inst->stageCount_; ++i)
+					inst->couplingMatrix_(i, idx) = positions(i);
 
 				inst->updateInverse();
 			}
