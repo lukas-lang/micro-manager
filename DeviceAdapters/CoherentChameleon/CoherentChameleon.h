@@ -78,6 +78,7 @@ private:
     bool initialized_;
    
     std::string port_;
+	bool propertiesPaused_;
 
 	struct ShutterSettingAccessor : public PropertyAccessor
 	{
@@ -87,4 +88,22 @@ private:
 
     bool enableShutterSetting_;
     friend struct ShutterSettingAccessor;
+
+	struct PausablePropertyAccessor : public PropertyAccessor
+	{
+		PropertyAccessor* propAcc;
+		bool& paused;
+		bool cacheValid;
+		std::string cachedVal;
+
+		PausablePropertyAccessor(PropertyAccessorWrapper propAcc, Ref<bool> paused) : propAcc(propAcc.propAcc), paused(paused()), cacheValid(false) {}
+
+		virtual ~PausablePropertyAccessor();
+
+		std::string QueryParameter(CoherentChameleon* inst);
+
+		void SetParameter(CoherentChameleon* inst, std::string val);
+	};
+
+	PropertyAccessor* pausable(PropertyAccessorWrapper propAcc);
 };

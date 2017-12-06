@@ -44,7 +44,8 @@ const char* g_device_name = "Coherent chameleon Ultra laser";
 
 CoherentChameleon::CoherentChameleon() :
 	initialized_(false),
-	enableShutterSetting_(false)
+	enableShutterSetting_(false),
+	propertiesPaused_(true)
 {
 	InitializeDefaultErrorMessages();
 
@@ -87,8 +88,8 @@ void CoherentChameleon::GetName(char* name) const
 
 int CoherentChameleon::Initialize()
 {
-	ERRH_START
-		SendCommand("ECHO=0", false);
+ERRH_START
+	SendCommand("ECHO=0", false);
 	SendCommand("PROMPT=0", false);
 
 	std::vector<std::string>
@@ -96,24 +97,26 @@ int CoherentChameleon::Initialize()
 		disEn = vector_of("Disabled")("Enabled"),
 		olsf = vector_of("Open")("Locked")("Seeking")("Fault");
 
-	SetPropertyNames(MapProperty(LBO_HEATER, "Enable LBO heater"), offOn);
-	SetPropertyNames(MapProperty(SEARCH_MODELOCK, "Search for modelock"), disEn);
+	SetPropertyNames(MapProperty(ref(propertiesPaused_), "Refresh properties (excl. wavelength/power/status/faults)"), vector_of("Enabled")("Disabled"));
+
+	SetPropertyNames(MapProperty(pausable(LBO_HEATER), "Enable LBO heater"), offOn);
+	SetPropertyNames(MapProperty(pausable(SEARCH_MODELOCK), "Search for modelock"), disEn);
 	MapTriggerProperty(ref(enableShutterSetting_), "Enable shutter setting", "Enable once");
 	
 	SetPropertyNames(MapProperty(new ShutterSettingAccessor(), "Shutter"), vector_of("Closed")("Open"));
 
-	MapProperty(TUNING_LIMIT_MIN, "Minimum wavelength (nm)", true, MM::Float);
-	MapProperty(TUNING_LIMIT_MAX, "Maximum wavelength (nm)", true, MM::Float);
+	MapProperty(pausable(TUNING_LIMIT_MIN), "Minimum wavelength (nm)", true, MM::Float);
+	MapProperty(pausable(TUNING_LIMIT_MAX), "Maximum wavelength (nm)", true, MM::Float);
 	MapNumProperty(WAVELENGTH, "Wavelength (nm)", stoi(QueryParameter(TUNING_LIMIT_MIN)), stoi(QueryParameter(TUNING_LIMIT_MAX)));
 
-	MapTriggerProperty(FLASH, "Flash Verdi laser output below threshold to recenter mode");
-	MapTriggerProperty(LBO_OPTIMIZE, "Begin LBO optimization routine");
-	MapTriggerProperty(HOME_STEPPER, "Home the tuning motor (takes 3-30s)");
-	MapTriggerProperty(RECOVERY, "Initiate recovery (takes up to 2min)");
+	MapTriggerProperty(pausable(FLASH), "Flash Verdi laser output below threshold to recenter mode");
+	MapTriggerProperty(pausable(LBO_OPTIMIZE), "Begin LBO optimization routine");
+	MapTriggerProperty(pausable(HOME_STEPPER), "Home the tuning motor (takes 3-30s)");
+	MapTriggerProperty(pausable(RECOVERY), "Initiate recovery (takes up to 2min)");
 
-	SetPropertyNames(MapProperty(ALIGN, "Alignment mode", true), disEn);
-	MapProperty(ALIGNP, "Alignment mode power (mW)", true, MM::Float);
-	MapProperty(ALIGNW, "Alignment mode wavelength (nm)", true, MM::Float);
+	SetPropertyNames(MapProperty(pausable(ALIGN), "Alignment mode", true), disEn);
+	MapProperty(pausable(ALIGNP), "Alignment mode power (mW)", true, MM::Float);
+	MapProperty(pausable(ALIGNW), "Alignment mode wavelength (nm)", true, MM::Float);
 
 	int laserId = MapProperty(LASER, "Laser status", true);
 	SetPropertyNames(laserId, vector_of("Off")("On")("Off due to fault"));
@@ -122,69 +125,70 @@ int CoherentChameleon::Initialize()
 	SetPropertyNames(MapProperty(KEYSWITCH, "Keyswitch status", true), offOn);
 
 	MapProperty(UF_POWER, "Actual UF (Chameleon) power (mW)", true, MM::Float);
-	MapProperty(CAVITY_PEAK_HOLD, "Cavity peak hold status", true);
-	SetPropertyNames(MapProperty(CAVITY_PZT_MODE, "Cavity PZT mode", true), vector_of("Auto")("Manual"));
-	MapProperty(CAVITY_PZT_X, "Cavity PZT X (Rd) voltage (V)", true, MM::Float);
-	MapProperty(CAVITY_PZT_Y, "Cavity PZT Y (Rd) voltage (V)", true, MM::Float);
-	SetPropertyNames(MapProperty(PUMP_PEAK_HOLD, "Pump peak hold status", true), offOn);
-	SetPropertyNames(MapProperty(PUMP_PZT_MODE, "Pump PZT mode", true), vector_of("Auto")("Manual"));
-	MapProperty(PUMP_PZT_X, "Pump PZT X (Rd) voltage (V)", true, MM::Float);
-	MapProperty(PUMP_PZT_Y, "Pump PZT Y (Rd) voltage (V)", true, MM::Float);
+
+	MapProperty(pausable(CAVITY_PEAK_HOLD), "Cavity peak hold status", true);
+	SetPropertyNames(MapProperty(pausable(CAVITY_PZT_MODE), "Cavity PZT mode", true), vector_of("Auto")("Manual"));
+	MapProperty(pausable(CAVITY_PZT_X), "Cavity PZT X (Rd) voltage (V)", true, MM::Float);
+	MapProperty(pausable(CAVITY_PZT_Y), "Cavity PZT Y (Rd) voltage (V)", true, MM::Float);
+	SetPropertyNames(MapProperty(pausable(PUMP_PEAK_HOLD), "Pump peak hold status", true), offOn);
+	SetPropertyNames(MapProperty(pausable(PUMP_PZT_MODE), "Pump PZT mode", true), vector_of("Auto")("Manual"));
+	MapProperty(pausable(PUMP_PZT_X), "Pump PZT X (Rd) voltage (V)", true, MM::Float);
+	MapProperty(pausable(PUMP_PZT_Y), "Pump PZT Y (Rd) voltage (V)", true, MM::Float);
 	//SetPropertyNames(MapProperty(POWER_TRACK, "PowerTrack state", true), offOn); //TODO: Fix command
 	SetPropertyNames(MapProperty(MODELOCKED, "Chameleon Ultra state", true), vector_of("Off (Standby)")("Modelocked")("CW"));
-	MapProperty(PUMP_SETTING, "Pump power setpoint (fraction of QS to CW pump band)", true, MM::Float);
-	SetPropertyNames(MapProperty(TUNING_STATUS, "Tuning state", true), vector_of("Ready")("Tuning in progress")("Searching for modelock")("Recovery operation in progress"));
-	SetPropertyNames(MapProperty(SEARCH_MODELOCK, "Modelock search status", true), disEn);
-	SetPropertyNames(MapProperty(HOMED, "Tuning motor homing status", true), vector_of("Has not been homed")("Has been homed"));
-	MapProperty(STEPPER_POSITION, "Stepper motor position (counts)", true, MM::Integer);
-	MapProperty(CURRENT, "Average diode current (A)", true, MM::Float);
-	MapProperty(DIODE1_CURRENT, "Diode #1 current (A)", true, MM::Float);
-	MapProperty(DIODE2_CURRENT, "Diode #2 current (A)", true, MM::Float);
-	MapProperty(BASEPLATE_TEMP, "Head baseplate temperature (deg C)", true, MM::Float);
-	MapProperty(DIODE1_TEMP, "Diode #1 temperature (deg C)", true, MM::Float);
-	MapProperty(DIODE2_TEMP, "Diode #2 temperature (deg C)", true, MM::Float);
-	MapProperty(VANADATE_TEMP, "Vanadate temperature (deg C)", true, MM::Float);
-	MapProperty(LBO_TEMP, "LBO temperature (deg C)", true, MM::Float);
-	MapProperty(ETALON_TEMP, "Etalon temperature (deg C)", true, MM::Float);
-	MapProperty(DIODE1_SET_TEMP, "Diode #1 set temperature (deg C)", true, MM::Float);
-	MapProperty(DIODE2_SET_TEMP, "Diode #2 set temperature (deg C)", true, MM::Float);
-	MapProperty(VANADATE_SET_TEMP, "Vanadate set temperature (deg C)", true, MM::Float);
-	MapProperty(LBO_SET_TEMP, "LBO set temperature (deg C)", true, MM::Float);
-	MapProperty(ETALON_SET_TEMP, "Etalon set temperature (deg C)", true, MM::Float);
-	MapProperty(DIODE1_TEMP_DRIVE, "Diode #1 temperature servo drive setting", true);
-	MapProperty(DIODE2_TEMP_DRIVE, "Diode #2 temperature servo drive setting", true);
-	MapProperty(VANADATE_DRIVE, "Vanadate temperature servo drive setting", true);
-	MapProperty(LBO_DRIVE, "LBO temperature servo drive setting", true);
-	MapProperty(ETALON_DRIVE, "Etalon temperature servo drive setting", true);
-	MapProperty(DIODE1_HEATSINK_TEMP, "Diode #1 heat sink temperature (deg C)", true, MM::Float);
-	MapProperty(DIODE2_HEATSINK_TEMP, "Diode #2 heat sink temperature (deg C)", true, MM::Float);
-	SetPropertyNames(MapProperty(LIGHT_REG_STATUS, "Light loop status", true), olsf);
-	SetPropertyNames(MapProperty(DIODE1_SERVO_STATUS, "Diode #1 temperature servo status", true), olsf);
-	SetPropertyNames(MapProperty(DIODE2_SERVO_STATUS, "Diode #2 temperature servo status", true), olsf);
-	SetPropertyNames(MapProperty(VANADATE_SERVO_STATUS, "Vanadate temperature servo status", true), olsf);
-	SetPropertyNames(MapProperty(LBO_SERVO_STATUS, "LBO temperature servo status", true), olsf);
-	SetPropertyNames(MapProperty(ETALON_SERVO_STATUS, "Etalon temperature servo status", true), olsf);
-	MapProperty(DIODE1_HOURS, "Diode #1 operating time (h)", true, MM::Float);
-	MapProperty(DIODE2_HOURS, "Diode #2 operating time (h)", true, MM::Float);
-	MapProperty(HEAD_HOURS, "Head operating time (h)", true, MM::Float);
-	MapProperty(DIODE1_VOLTAGE, "Diode #1 voltage (V)", true, MM::Float);
-	MapProperty(DIODE2_VOLTAGE, "Diode #2 voltage (V)", true, MM::Float);
-	MapProperty(SOFTWARE, "Power supply software version", true);
-	MapProperty(BAT_VOLTS, "Battery voltage (V)", true, MM::Float);
-	SetPropertyNames(MapProperty(AUTOMODELOCK, "Automodelock routing status", true), disEn);
+	MapProperty(pausable(PUMP_SETTING), "Pump power setpoint (fraction of QS to CW pump band)", true, MM::Float);
+	SetPropertyNames(MapProperty(pausable(TUNING_STATUS), "Tuning state", true), vector_of("Ready")("Tuning in progress")("Searching for modelock")("Recovery operation in progress"));
+	SetPropertyNames(MapProperty(pausable(SEARCH_MODELOCK), "Modelock search status", true), disEn);
+	SetPropertyNames(MapProperty(pausable(HOMED), "Tuning motor homing status", true), vector_of("Has not been homed")("Has been homed"));
+	MapProperty(pausable(STEPPER_POSITION), "Stepper motor position (counts)", true, MM::Integer);
+	MapProperty(pausable(CURRENT), "Average diode current (A)", true, MM::Float);
+	MapProperty(pausable(DIODE1_CURRENT), "Diode #1 current (A)", true, MM::Float);
+	MapProperty(pausable(DIODE2_CURRENT), "Diode #2 current (A)", true, MM::Float);
+	MapProperty(pausable(BASEPLATE_TEMP), "Head baseplate temperature (deg C)", true, MM::Float);
+	MapProperty(pausable(DIODE1_TEMP), "Diode #1 temperature (deg C)", true, MM::Float);
+	MapProperty(pausable(DIODE2_TEMP), "Diode #2 temperature (deg C)", true, MM::Float);
+	MapProperty(pausable(VANADATE_TEMP), "Vanadate temperature (deg C)", true, MM::Float);
+	MapProperty(pausable(LBO_TEMP), "LBO temperature (deg C)", true, MM::Float);
+	MapProperty(pausable(ETALON_TEMP), "Etalon temperature (deg C)", true, MM::Float);
+	MapProperty(pausable(DIODE1_SET_TEMP), "Diode #1 set temperature (deg C)", true, MM::Float);
+	MapProperty(pausable(DIODE2_SET_TEMP), "Diode #2 set temperature (deg C)", true, MM::Float);
+	MapProperty(pausable(VANADATE_SET_TEMP), "Vanadate set temperature (deg C)", true, MM::Float);
+	MapProperty(pausable(LBO_SET_TEMP), "LBO set temperature (deg C)", true, MM::Float);
+	MapProperty(pausable(ETALON_SET_TEMP), "Etalon set temperature (deg C)", true, MM::Float);
+	MapProperty(pausable(DIODE1_TEMP_DRIVE), "Diode #1 temperature servo drive setting", true);
+	MapProperty(pausable(DIODE2_TEMP_DRIVE), "Diode #2 temperature servo drive setting", true);
+	MapProperty(pausable(VANADATE_DRIVE), "Vanadate temperature servo drive setting", true);
+	MapProperty(pausable(LBO_DRIVE), "LBO temperature servo drive setting", true);
+	MapProperty(pausable(ETALON_DRIVE), "Etalon temperature servo drive setting", true);
+	MapProperty(pausable(DIODE1_HEATSINK_TEMP), "Diode #1 heat sink temperature (deg C)", true, MM::Float);
+	MapProperty(pausable(DIODE2_HEATSINK_TEMP), "Diode #2 heat sink temperature (deg C)", true, MM::Float);
+	SetPropertyNames(MapProperty(pausable(LIGHT_REG_STATUS), "Light loop status", true), olsf);
+	SetPropertyNames(MapProperty(pausable(DIODE1_SERVO_STATUS), "Diode #1 temperature servo status", true), olsf);
+	SetPropertyNames(MapProperty(pausable(DIODE2_SERVO_STATUS), "Diode #2 temperature servo status", true), olsf);
+	SetPropertyNames(MapProperty(pausable(VANADATE_SERVO_STATUS), "Vanadate temperature servo status", true), olsf);
+	SetPropertyNames(MapProperty(pausable(LBO_SERVO_STATUS), "LBO temperature servo status", true), olsf);
+	SetPropertyNames(MapProperty(pausable(ETALON_SERVO_STATUS), "Etalon temperature servo status", true), olsf);
+	MapProperty(pausable(DIODE1_HOURS), "Diode #1 operating time (h)", true, MM::Float);
+	MapProperty(pausable(DIODE2_HOURS), "Diode #2 operating time (h)", true, MM::Float);
+	MapProperty(pausable(HEAD_HOURS), "Head operating time (h)", true, MM::Float);
+	MapProperty(pausable(DIODE1_VOLTAGE), "Diode #1 voltage (V)", true, MM::Float);
+	MapProperty(pausable(DIODE2_VOLTAGE), "Diode #2 voltage (V)", true, MM::Float);
+	MapProperty(pausable(SOFTWARE), "Power supply software version", true);
+	MapProperty(pausable(BAT_VOLTS), "Battery voltage (V)", true, MM::Float);
+	SetPropertyNames(MapProperty(pausable(AUTOMODELOCK), "Automodelock routing status", true), disEn);
 	//MapProperty(PZT_CONTROL_STATE, "PZT control state", true); //TODO: Fix command
 
-	MapProperty(PZTXCM, "Last power map result for cavity X PZT position (% of available range)", true, MM::Float);
-	MapProperty(PZTXCP, "Current cavity X PZT position (% of available range)", true, MM::Float);
-	MapProperty(PZTXPM, "Last power map result for pump X PZT position (% of available range)", true, MM::Float);
-	MapProperty(PZTXPP, "Current pump X PZT position (% of available range)", true, MM::Float);
-	MapProperty(PZTYCM, "Last power map result for cavity Y PZT position (% of available range)", true, MM::Float);
-	MapProperty(PZTYCP, "Current cavity Y PZT position (% of available range)", true, MM::Float);
-	MapProperty(PZTYPM, "Last power map result for pump Y PZT position (% of available range)", true, MM::Float);
-	MapProperty(PZTYPP, "Current pump Y PZT position (% of available range)", true, MM::Float);
-	MapProperty(RH, "Relative humidity (%)", true, MM::Float);
-	MapProperty(SN, "Serial number", true);
-	MapProperty(ST, "Operating status", true);
+	MapProperty(pausable(PZTXCM), "Last power map result for cavity X PZT position (% of available range)", true, MM::Float);
+	MapProperty(pausable(PZTXCP), "Current cavity X PZT position (% of available range)", true, MM::Float);
+	MapProperty(pausable(PZTXPM), "Last power map result for pump X PZT position (% of available range)", true, MM::Float);
+	MapProperty(pausable(PZTXPP), "Current pump X PZT position (% of available range)", true, MM::Float);
+	MapProperty(pausable(PZTYCM), "Last power map result for cavity Y PZT position (% of available range)", true, MM::Float);
+	MapProperty(pausable(PZTYCP), "Current cavity Y PZT position (% of available range)", true, MM::Float);
+	MapProperty(pausable(PZTYPM), "Last power map result for pump Y PZT position (% of available range)", true, MM::Float);
+	MapProperty(pausable(PZTYPP), "Current pump Y PZT position (% of available range)", true, MM::Float);
+	MapProperty(pausable(RH), "Relative humidity (%)", true, MM::Float);
+	MapProperty(pausable(SN), "Serial number", true);
+	MapProperty(pausable(ST), "Operating status", true);
 
 	CreateProperty("Active faults", "No faults", MM::String, false, new CPropertyActionEx(this, &CoherentChameleon::OnFaults, 0));
 	CreateProperty("Fault history", "No faults", MM::String, false, new CPropertyActionEx(this, &CoherentChameleon::OnFaults, 1));
@@ -267,6 +271,11 @@ int CoherentChameleon::OnFaults(MM::PropertyBase* pProp, MM::ActionType eAct, lo
 	ERRH_END
 }
 
+CoherentChameleon::PropertyAccessor* CoherentChameleon::pausable(PropertyAccessorWrapper propAcc)
+{
+	return new PausablePropertyAccessor(propAcc, ref(propertiesPaused_));
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 // Action handlers
 ///////////////////////////////////////////////////////////////////////////////
@@ -334,4 +343,23 @@ int CoherentChameleon::Fire(double deltaT)
 	CDeviceUtils::SleepMs(deltaT + .5);
 	SetOpen(false);
 	ERRH_END
+}
+
+CoherentChameleon::PausablePropertyAccessor::~PausablePropertyAccessor()
+{
+	delete propAcc;
+}
+
+std::string CoherentChameleon::PausablePropertyAccessor::QueryParameter(CoherentChameleon * inst)
+{
+	if (paused && cacheValid)
+		return cachedVal;
+
+	cacheValid = true;
+	return cachedVal = propAcc->QueryParameter(inst);
+}
+
+void CoherentChameleon::PausablePropertyAccessor::SetParameter(CoherentChameleon * inst, std::string val)
+{
+	propAcc->SetParameter(inst, val);
 }
