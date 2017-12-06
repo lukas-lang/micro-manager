@@ -236,7 +236,7 @@ DecouplingController::Vec DecouplingController::GetPositionsUm()
 		MM::Stage* stage = stages_[i];
 
 		if (!stage)
-			throw errorCode(STAGE_NOT_SET);
+			return Vec(inv.size1(), 0); //don't throw, as the position is queried too early
 
 		double pos;
 		errorCode::ThrowErr(stage->GetPositionUm(pos), stage);
