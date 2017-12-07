@@ -41,6 +41,8 @@ public:
 	int IsStageSequenceable(bool& isSequenceable) const;
 	bool IsContinuousFocusDrive() const;
 
+	void waitForStages();
+
 	DecouplingController* getController();
 
 	typedef boost::numeric::ublas::matrix<double> Mat;

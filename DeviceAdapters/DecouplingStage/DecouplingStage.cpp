@@ -90,6 +90,8 @@ ERRH_END
 int DecouplingStage::SetPositionUm(double pos)
 {
 ERRH_START
+	waitForStages();
+
 	Vec vPositions = controller_->GetPositionsUm();
 
 	vPositions[axisIndex_] = pos;
@@ -102,6 +104,8 @@ ERRH_END
 int DecouplingStage::SetRelativePositionUm(double pos)
 {
 ERRH_START
+	waitForStages();
+
 	Vec vPositions = controller_->GetPositionsUm();
 
 	vPositions[axisIndex_] += pos;
@@ -157,4 +161,12 @@ int DecouplingStage::IsStageSequenceable(bool & isSequenceable) const
 bool DecouplingStage::IsContinuousFocusDrive() const
 {
 	return false;
+}
+
+void DecouplingStage::waitForStages()
+{
+	while (Busy())
+	{
+		CDeviceUtils::SleepMs(10);
+	}
 }
