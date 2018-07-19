@@ -11,7 +11,7 @@ LT_INIT([disable-static])
 AC_PROG_CXX([clang++ llvm-g++ g++ c++])
 AC_PROG_CC([clang llvm-gcc gcc cc])
 
-MM_GMOCK([$srcdir/../testing/gmock], [\$(top_srcdir)/../testing/gmock])
+MM_GMOCK([$srcdir/../testing/googletest], [\$(top_srcdir)/../testing/googletest])
 AM_CONDITIONAL([BUILD_CPP_TESTS], [test "x$have_gmock" = xyes])
 
 # TODO: Following should decide whether adapters depending on BOOST get build
@@ -80,6 +80,25 @@ AS_IF([test "x$want_hidapi" != xno],
 
 
 AM_CONDITIONAL([BUILD_HID], [test "x$use_hidapi" = xyes])
+
+
+# Check for libmodbus
+MM_ARG_WITH_OPTIONAL_LIB([libmodbus], [modbus], [MODBUS])
+AS_IF([test "x$want_modbus" != xno],
+[
+   MM_LIB_MODBUS([$MODBUS_PREFIX],
+   [
+      use_modbus=yes
+   ],
+   [
+      use_modbus=no
+      AS_IF([test "x$want_modbus" = xyes],
+            [MM_MSG_OPTIONAL_LIB_FAILURE([libmodbus], [modbus])])
+   ])
+],
+[use_modbus=no])
+
+AM_CONDITIONAL([BUILD_MODBUS], [test "x$use_modbus" = xyes])
 
 
 # Only build PVCAM if header files present.
@@ -406,6 +425,7 @@ m4_define([device_adapter_dirs], [m4_strip([
    AndorSDK3
    Aquinas
    Arduino
+   BlueboxOptics_niji
    CARVII
    CNCMicroscope
    CNCMicroscope/ArduinoNeoPixelShutter
@@ -414,18 +434,26 @@ m4_define([device_adapter_dirs], [m4_strip([
    Cobolt
    CoherentCube
    CoherentOBIS
+   CoherentScientificRemote
    Conix
+   CoolLEDpE300
+   CoolLEDpE4000
    Corvus
    DTOpenLayer
    DemoCamera
    Diskovery
+   FakeCamera
    FocalPoint
    FreeSerialPort
+   HamiltonMVP
+   HamiltonMVP/unittest
    HIDManager
+   HydraLMT200
    IDS_uEye
    IIDC
    ITC18
    ImageProcessorChain
+   IsmatecMCP
    K8055
    K8061
    LeicaDMI
@@ -440,6 +468,7 @@ m4_define([device_adapter_dirs], [m4_strip([
    Marzhauser-LStep
    MarzhauserLStepOld
    MicroPoint
+   Modbus
    Motic_mac
    Neos
    NewportCONEX
@@ -456,6 +485,7 @@ m4_define([device_adapter_dirs], [m4_strip([
    PVCAM
    ParallelPort
    Pecon
+   PIEZOCONCEPT
    Piezosystem_30DV50
    Piezosystem_NV120_1
    Piezosystem_NV40_1
@@ -474,9 +504,11 @@ m4_define([device_adapter_dirs], [m4_strip([
    SerialManager
    SimpleAutofocus
    SimpleCam
+   SmarActHCU-3D
    SpectralLMM5
    Spot
    SutterLambda
+   SutterLambdaParallelArduino
    SutterStage
    Thorlabs
    ThorlabsDCxxxx
@@ -492,6 +524,7 @@ m4_define([device_adapter_dirs], [m4_strip([
    Video4Linux
    Vincent
    Vortran
+   WieneckeSinske
    XCite120PC_Exacte
    XCiteLed
    XCiteXT600
@@ -524,6 +557,9 @@ echo "m4_text_wrap([$use_freeimageplus],
 echo "m4_text_wrap([$use_hidapi],
                    [                                            ],
                    [    Build with HIDAPI:                      ])"
+echo "m4_text_wrap([$use_modbus],
+                   [                                            ],
+                   [    Build with Modbus:                      ])"
 echo "m4_text_wrap([$use_libdc1394],
                    [                                            ],
                    [    Build with libdc1394:                   ])"

@@ -3,15 +3,15 @@
 // PROJECT:       Micro-Manager
 // SUBSYSTEM:     MMCore
 //-----------------------------------------------------------------------------
-// DESCRIPTION:   The interface to the MM core services. 
-//              
+// DESCRIPTION:   The interface to the MM core services.
+//
 // COPYRIGHT:     University of California, San Francisco, 2006-2014
 //                100X Imaging Inc, www.100ximaging.com, 2008
 //
 // LICENSE:       This library is free software; you can redistribute it and/or
 //                modify it under the terms of the GNU Lesser General Public
 //                License as published by the Free Software Foundation.
-//                
+//
 //                You should have received a copy of the GNU Lesser General Public
 //                License along with the source distribution; if not, write to
 //                the Free Software Foundation, Inc., 59 Temple Place, Suite 330,
@@ -324,8 +324,12 @@ public:
    double getPixelSizeUm();
    double getPixelSizeUm(bool cached);
    double getPixelSizeUmByID(const char* resolutionID) throw (CMMError);
+   std::vector<double> getPixelSizeAffine() throw (CMMError);
+   std::vector<double> getPixelSizeAffine(bool cached) throw (CMMError);
+   std::vector<double> getPixelSizeAffineByID(const char* resolutionID) throw (CMMError);
    double getMagnificationFactor() const;
    void setPixelSizeUm(const char* resolutionID, double pixSize)  throw (CMMError);
+   void setPixelSizeAffine(const char* resolutionID, std::vector<double> affine)  throw (CMMError);
    void definePixelSizeConfig(const char* resolutionID,
          const char* deviceLabel, const char* propName,
          const char* value) throw (CMMError);
@@ -482,13 +486,15 @@ public:
    int getFocusDirection(const char* stageLabel) throw (CMMError);
 
    bool isStageSequenceable(const char* stageLabel) throw (CMMError);
+   bool isStageLinearSequenceable(const char* stageLabel) throw (CMMError);
    void startStageSequence(const char* stageLabel) throw (CMMError);
    void stopStageSequence(const char* stageLabel) throw (CMMError);
    long getStageSequenceMaxLength(const char* stageLabel) throw (CMMError);
    void loadStageSequence(const char* stageLabel,
          std::vector<double> positionSequence) throw (CMMError);
+   void setStageLinearSequence(const char* stageLabel, double dZ_um, int nSlices) throw (CMMError);
    ///@}
-   
+
    /** \name XY stage control. */
    ///@{
    void setXYPosition(const char* xyStageLabel,
@@ -548,7 +554,7 @@ public:
    /** \name SLM control.
     *
     * Control of spatial light modulators such as liquid crystal on silicon
-    * (LCoS), digital micromirror devices (DMD), or multimedia projectors. 
+    * (LCoS), digital micromirror devices (DMD), or multimedia projectors.
     */
    ///@{
    void setSLMImage(const char* slmLabel,

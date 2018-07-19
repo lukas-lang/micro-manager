@@ -244,7 +244,9 @@ CDemoCamera::CDemoCamera() :
    nComponents_(1),
    mode_(MODE_ARTIFICIAL_WAVES),
    imgManpl_(0),
-   pcf_(1.0)
+   pcf_(1.0),
+   photonFlux_(50.0),
+   readNoise_(2.5)
 {
    memset(testProperty_,0,sizeof(testProperty_));
 
@@ -348,7 +350,7 @@ int CDemoCamera::Initialize()
    pixelTypeValues.push_back(g_PixelType_16bit); 
 	pixelTypeValues.push_back(g_PixelType_32bitRGB);
 	pixelTypeValues.push_back(g_PixelType_64bitRGB);
-   //pixelTypeValues.push_back(::g_PixelType_32bit);
+   pixelTypeValues.push_back(::g_PixelType_32bit);
 
    nRet = SetAllowedValues(MM::g_Keyword_PixelType, pixelTypeValues);
    if (nRet != DEVICE_OK)
@@ -503,7 +505,19 @@ int CDemoCamera::Initialize()
    pAct = new CPropertyAction(this, &CDemoCamera::OnPCF);
    propName = "Photon Conversion Factor";
    CreateFloatProperty(propName.c_str(), pcf_, false, pAct);
-   SetPropertyLimits(propName.c_str(), 0.4, 4.0);
+   SetPropertyLimits(propName.c_str(), 0.01, 10.0);
+
+   // Read Noise (expressed in electrons) for the Noise type camera
+   pAct = new CPropertyAction(this, &CDemoCamera::OnReadNoise);
+   propName = "ReadNoise (electrons)";
+   CreateFloatProperty(propName.c_str(), readNoise_, false, pAct);
+   SetPropertyLimits(propName.c_str(), 0.25, 50.0);
+
+   // Photon Flux for the Noise type camera
+   pAct = new CPropertyAction(this, &CDemoCamera::OnPhotonFlux);
+   propName = "Photon Flux";
+   CreateFloatProperty(propName.c_str(), photonFlux_, false, pAct);
+   SetPropertyLimits(propName.c_str(), 2.0, 5000.0);
 
    // Simulate application crash
    pAct = new CPropertyAction(this, &CDemoCamera::OnCrash);
@@ -768,7 +782,7 @@ bool CDemoCamera::IsMultiROISet()
  */
 int CDemoCamera::GetMultiROICount(unsigned int& count)
 {
-   count = multiROIXs_.size();
+   count = (unsigned int) multiROIXs_.size();
    return DEVICE_OK;
 }
 
@@ -791,11 +805,11 @@ int CDemoCamera::SetMultiROI(const unsigned int* xs, const unsigned int* ys,
    multiROIYs_.clear();
    multiROIWidths_.clear();
    multiROIHeights_.clear();
-   int minX = INT_MAX;
-   int minY = INT_MAX;
-   int maxX = 0;
-   int maxY = 0;
-   for (int i = 0; i < numROIs; ++i)
+   unsigned int minX = UINT_MAX;
+   unsigned int minY = UINT_MAX;
+   unsigned int maxX = 0;
+   unsigned int maxY = 0;
+   for (unsigned int i = 0; i < numROIs; ++i)
    {
       multiROIXs_.push_back(xs[i]);
       multiROIYs_.push_back(ys[i]);
@@ -839,13 +853,13 @@ int CDemoCamera::SetMultiROI(const unsigned int* xs, const unsigned int* ys,
 int CDemoCamera::GetMultiROI(unsigned* xs, unsigned* ys, unsigned* widths,
       unsigned* heights, unsigned* length)
 {
-   unsigned roiCount = multiROIXs_.size();
+   unsigned int roiCount = (unsigned int) multiROIXs_.size();
    if (roiCount > *length)
    {
       // This should never happen.
       return DEVICE_INTERNAL_INCONSISTENCY;
    }
-   for (int i = 0; i < roiCount; ++i)
+   for (unsigned int i = 0; i < roiCount; ++i)
    {
       xs[i] = multiROIXs_[i];
       ys[i] = multiROIYs_[i];
@@ -1089,13 +1103,13 @@ int CDemoCamera::InsertImage()
    unsigned int h = GetImageHeight();
    unsigned int b = GetImageBytesPerPixel();
 
-   int ret = GetCoreCallback()->InsertImage(this, pI, w, h, b, md.Serialize().c_str());
+   int ret = GetCoreCallback()->InsertImage(this, pI, w, h, b, nComponents_, md.Serialize().c_str());
    if (!stopOnOverflow_ && ret == DEVICE_BUFFER_OVERFLOW)
    {
       // do not stop on overflow - just reset the buffer
       GetCoreCallback()->ClearImageBuffer(this);
       // don't process this same image again...
-      return GetCoreCallback()->InsertImage(this, pI, w, h, b, md.Serialize().c_str(), false);
+      return GetCoreCallback()->InsertImage(this, pI, w, h, b, nComponents_, md.Serialize().c_str(), false);
    }
    else
    {
@@ -1297,16 +1311,17 @@ int CDemoCamera::OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct)
          {
             // calculate ROI using the previous bin settings
             double factor = (double) binFactor / (double) binSize_;
-            roiX_ /= factor;
-            roiY_ /= factor;
+            roiX_ = (unsigned int) (roiX_ / factor);
+            roiY_ = (unsigned int) (roiY_ / factor);
             for (int i = 0; i < multiROIXs_.size(); ++i)
             {
-               multiROIXs_[i] /= factor;
-               multiROIYs_[i] /= factor;
-               multiROIWidths_[i] /= factor;
-               multiROIHeights_[i] /= factor;
+               multiROIXs_[i]  = (unsigned int) (multiROIXs_[i] / factor);
+               multiROIYs_[i] = (unsigned int) (multiROIYs_[i] / factor);
+               multiROIWidths_[i] = (unsigned int) (multiROIWidths_[i] / factor);
+               multiROIHeights_[i] = (unsigned int) (multiROIHeights_[i] / factor);
             }
-            img_.Resize(img_.Width()/factor, img_.Height()/factor);
+            img_.Resize( (unsigned int) (img_.Width()/factor), 
+                           (unsigned int) (img_.Height()/factor) );
             binSize_ = binFactor;
             std::ostringstream os;
             os << binSize_;
@@ -1872,6 +1887,32 @@ int CDemoCamera::OnPCF(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
+int CDemoCamera::OnPhotonFlux(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+      pProp->Set(photonFlux_);
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      pProp->Get(photonFlux_);
+   }
+   return DEVICE_OK;
+}
+
+int CDemoCamera::OnReadNoise(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+      pProp->Set(readNoise_);
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      pProp->Get(readNoise_);
+   }
+   return DEVICE_OK;
+}
+
 
 int CDemoCamera::OnCrash(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
@@ -1890,6 +1931,7 @@ int CDemoCamera::OnCrash(MM::PropertyBase* pProp, MM::ActionType eAct)
       {
          int* p = 0;
          volatile int i = *p;
+         i++;
       }
       else if (choice == "Divide by Zero")
       {
@@ -1978,9 +2020,9 @@ void CDemoCamera::GenerateSyntheticImage(ImgBuffer& img, double exp)
       {
          offset = 100;
       }
-	   double readNoise = 3.0;
-      AddBackgroundAndNoise(img, offset, readNoise);
-      AddSignal (img, 50.0, exp, pcf_);
+	   double readNoiseDN = readNoise_ / pcf_;
+      AddBackgroundAndNoise(img, offset, readNoiseDN);
+      AddSignal (img, photonFlux_, exp, pcf_);
       if (imgManpl_ != 0)
       {
          imgManpl_->ChangePixels(img);
@@ -2182,21 +2224,21 @@ void CDemoCamera::GenerateSyntheticImage(ImgBuffer& img, double exp)
          {
             long lIndex = imgWidth*j + k;
             unsigned char value0 =   (unsigned char) min(255.0, (pedestal + dAmp * sin(dPhase_ + dLinePhase + (2.0 * lSinePeriod * k) / lPeriod)));
-            theBytes[0] = value0;
+            theBytes[3] = value0;
             if( NULL != pTmpBuffer)
-               pTmp2[2] = value0;
+               pTmp2[1] = value0;
             unsigned char value1 =   (unsigned char) min(255.0, (pedestal + dAmp * sin(dPhase_ + dLinePhase*2 + (2.0 * lSinePeriod * k) / lPeriod)));
-            theBytes[1] = value1;
+            theBytes[2] = value1;
             if( NULL != pTmpBuffer)
-               pTmp2[1] = value1;
+               pTmp2[2] = value1;
             unsigned char value2 = (unsigned char) min(255.0, (pedestal + dAmp * sin(dPhase_ + dLinePhase*4 + (2.0 * lSinePeriod * k) / lPeriod)));
-            theBytes[2] = value2;
+            theBytes[1] = value2;
 
             if( NULL != pTmpBuffer){
-               pTmp2[0] = value2;
+               pTmp2[3] = value2;
                pTmp2+=3;
             }
-            theBytes[3] = 0;
+            theBytes[0] = 0;
             unsigned long tvalue = *(unsigned long*)(&theBytes[0]);
             if (tvalue > maxDrawnVal) {
                 maxDrawnVal = tvalue;
@@ -2314,12 +2356,12 @@ void CDemoCamera::GenerateSyntheticImage(ImgBuffer& img, double exp)
       // TODO: it would be more efficient to only populate pixel values that
       // *are* in an ROI, but that would require substantial refactoring of
       // this function.
-      for (int i = 0; i < imgWidth; ++i)
+      for (unsigned int i = 0; i < imgWidth; ++i)
       {
-         for (j = 0; j < img.Height(); ++j)
+         for (unsigned j = 0; j < img.Height(); ++j)
          {
             bool shouldKeep = false;
-            for (int k = 0; k < multiROIXs_.size(); ++k)
+            for (unsigned int k = 0; k < multiROIXs_.size(); ++k)
             {
                unsigned xOffset = multiROIXs_[k] - roiX_;
                unsigned yOffset = multiROIYs_[k] - roiY_;
@@ -2365,7 +2407,7 @@ bool CDemoCamera::GenerateColorTestPattern(ImgBuffer& img)
    {
       case 1:
       {
-         const unsigned long maxVal = 255;
+         const unsigned char maxVal = 255;
          unsigned char* rawBytes = img.GetPixelsRW();
          for (unsigned y = 0; y < height; ++y)
          {
@@ -2373,7 +2415,7 @@ bool CDemoCamera::GenerateColorTestPattern(ImgBuffer& img)
             {
                if (y == 0)
                {
-                  rawBytes[x] = maxVal * x / (width - 1);
+                  rawBytes[x] = (unsigned char) (maxVal * (x + 1) / (width - 1));
                }
                else {
                   rawBytes[x + y * width] = rawBytes[x];
@@ -2384,7 +2426,7 @@ bool CDemoCamera::GenerateColorTestPattern(ImgBuffer& img)
       }
       case 2:
       {
-         const unsigned long maxVal = 65535;
+         const unsigned short maxVal = 65535;
          unsigned short* rawShorts =
             reinterpret_cast<unsigned short*>(img.GetPixelsRW());
          for (unsigned y = 0; y < height; ++y)
@@ -2393,7 +2435,7 @@ bool CDemoCamera::GenerateColorTestPattern(ImgBuffer& img)
             {
                if (y == 0)
                {
-                  rawShorts[x] = maxVal * x / (width - 1);
+                  rawShorts[x] = (unsigned short) (maxVal * (x + 1) / (width - 1));
                }
                else {
                   rawShorts[x + y * width] = rawShorts[x];
@@ -2421,10 +2463,10 @@ bool CDemoCamera::GenerateColorTestPattern(ImgBuffer& img)
                      if (component == section ||
                            (section >= 4 && section - 4 != component))
                      {
-                        sample = maxVal * x / (width - 1);
+                        sample = maxVal * (x + 1) / (width - 1);
                      }
                      sample &= 0xff; // Just in case
-                     rawPixels[x + y * width] |= sample << (8 * (3 - component));
+                     rawPixels[x + y * width] |= sample << (8 * component);
                   }
                }
             }
@@ -2553,14 +2595,14 @@ void CDemoCamera::AddSignal(ImgBuffer& img, double photonFlux, double exp, doubl
 double CDemoCamera::GaussDistributedValue(double mean, double std)
 {
    double s = 2;
-   double u;
+   double u = 1; // incosequential, but avoid potantial use of uninitialized value
    double v;
-   double halfRandMax = RAND_MAX / 2;
+   double halfRandMax = (double) RAND_MAX / 2.0;
    while (s >= 1 || s <= 0) 
    {
       // get random values between -1 and 1
-      u = rand() / halfRandMax - 1.0;
-      v = rand() / halfRandMax - 1.0;
+      u = (double) rand() / halfRandMax - 1.0;
+      v = (double) rand() / halfRandMax - 1.0;
       s = u * u + v * v;
    }
    double tmp = sqrt( -2 * log(s) / s);
@@ -4053,6 +4095,7 @@ DemoGalvo::DemoGalvo() :
    vMaxY_(10.0)
 {
    // handwritten 5x5 gaussian kernel, no longer used
+   /*
    unsigned short gaussianMask[5][5] = {
       {1, 4, 7, 4, 1},
       {4, 16, 26, 16, 4},
@@ -4060,6 +4103,7 @@ DemoGalvo::DemoGalvo() :
       {4, 16, 26, 16, 4},
       {1, 4, 7, 4, 1}
    };
+   */
 
 }
 
@@ -4083,7 +4127,7 @@ int DemoGalvo::Initialize()
    { 
       for (int y =0; y < ySize; y++) 
       {
-         gaussianMask_[x][y] = GaussValue(41, 0.5, 0.5, xSize / 2, ySize / 2, x, y);
+         gaussianMask_[x][y] =(unsigned short) GaussValue(41, 0.5, 0.5, xSize / 2, ySize / 2, x, y);
       }
    }
 
@@ -4136,7 +4180,7 @@ int DemoGalvo::PointAndFire(double x, double y, double pulseTime_us)
    return DEVICE_OK;
 }
 
-int DemoGalvo::SetSpotInterval(double pulseInterval_us) 
+int DemoGalvo::SetSpotInterval(double /* pulseInterval_us */) 
 {
    return DEVICE_OK;
 }
@@ -4188,7 +4232,7 @@ int DemoGalvo::LoadPolygons()
    return DEVICE_OK;
 }
 
-int DemoGalvo::SetPolygonRepetitions(int repetitions) 
+int DemoGalvo::SetPolygonRepetitions(int /* repetitions */) 
 {
    return DEVICE_OK;
 }
@@ -4222,7 +4266,7 @@ int DemoGalvo::StopSequence()
 // What can this function be doing?
 // A channel is never set, so how come we can return one????
 // Documentation of the Galvo interface is severely lacking!!!!
-int DemoGalvo::GetChannel (char* channelName) 
+int DemoGalvo::GetChannel (char* /* channelName */) 
 {
    return DEVICE_OK;
 }
@@ -4261,7 +4305,7 @@ int DemoGalvo::ChangePixels(ImgBuffer& img)
       // establish the bounding boxes around the ROIs in image coordinates
       std::vector<std::vector<Point> > bBoxes = std::vector<std::vector<
          Point> >();
-      for (int i = 0; i < vertices_.size(); i++) {
+      for (unsigned int i = 0; i < vertices_.size(); i++) {
          std::vector<Point> vertex;
          for (std::vector<PointD>::iterator it = vertices_[i].begin();
                it != vertices_[i].end(); ++it)
@@ -4284,12 +4328,12 @@ int DemoGalvo::ChangePixels(ImgBuffer& img)
 
          // now iterate through the image pixels and set high 
          // if they are within a bounding box
-         for (int x = 0; x < img.Width(); x++)
+         for (unsigned int x = 0; x < img.Width(); x++)
          {
-            for (int y = 0; y < img.Height(); y++)
+            for (unsigned int y = 0; y < img.Height(); y++)
             {
                bool inROI = false;
-               for (int i = 0; i < bBoxes.size(); i++) 
+               for (unsigned int i = 0; i < bBoxes.size(); i++) 
                {
                   if (InBoundingBox(bBoxes[i], Point(x, y)))
                      inROI = true;
@@ -4310,12 +4354,12 @@ int DemoGalvo::ChangePixels(ImgBuffer& img)
 
          // now iterate through the image pixels and set high 
          // if they are within a bounding box
-         for (int x = 0; x < img.Width(); x++)
+         for (unsigned int x = 0; x < img.Width(); x++)
          {
-            for (int y = 0; y < img.Height(); y++)
+            for (unsigned int y = 0; y < img.Height(); y++)
             {
                bool inROI = false;
-               for (int i = 0; i < bBoxes.size(); i++) 
+               for (unsigned int i = 0; i < bBoxes.size(); i++) 
                {
                   if (InBoundingBox(bBoxes[i], Point(x, y)))
                      inROI = true;
@@ -4341,8 +4385,8 @@ int DemoGalvo::ChangePixels(ImgBuffer& img)
       int xSpotSize = sizeof(gaussianMask_) / sizeof(gaussianMask_[0]);
       int ySpotSize = sizeof(gaussianMask_[0]) / 2;
 
-      if (xPos > xSpotSize && xPos < img.Width() - xSpotSize - 1  && yPos > ySpotSize && yPos < img.Height() - 
-            ySpotSize - 1)
+      if (xPos > xSpotSize && xPos < (int) (img.Width() - xSpotSize - 1)  && 
+         yPos > ySpotSize && yPos < (int) (img.Height() - ySpotSize - 1) )
       {
          if (img.Depth() == 1)
          {
@@ -4392,10 +4436,10 @@ int DemoGalvo::ChangePixels(ImgBuffer& img)
  */
 Point DemoGalvo::GalvoToCameraPoint(PointD galvoPoint, ImgBuffer& img)
 {
-   int xPos = (double) offsetX_ + (double) (galvoPoint.x / vMaxX_) * 
-                                 ((double) img.Width() - (double) offsetX_);
-   int yPos = (double) offsetY_ + (double) (galvoPoint.y / vMaxY_) * 
-                                 ((double) img.Height() - (double) offsetY_);
+   int xPos = (int) ((double) offsetX_ + (double) (galvoPoint.x / vMaxX_) * 
+                                 ((double) img.Width() - (double) offsetX_) );
+   int yPos = (int) ((double) offsetY_ + (double) (galvoPoint.y / vMaxY_) * 
+                                 ((double) img.Height() - (double) offsetY_));
    return Point(xPos, yPos);
 }
 
@@ -4429,7 +4473,7 @@ void DemoGalvo::GetBoundingBox(std::vector<Point>& vertex, std::vector<Point>& b
    int maxX = minX;
    int minY = vertex[0].y;
    int maxY = minY;
-   for (int i = 1; i < vertex.size(); i++)
+   for (unsigned int i = 1; i < vertex.size(); i++)
    {
       if (vertex[i].x < minX)
          minX = vertex[i].x;

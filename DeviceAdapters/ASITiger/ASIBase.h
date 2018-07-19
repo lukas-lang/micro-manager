@@ -64,13 +64,15 @@ public:
       this->InitializeDefaultErrorMessages();
       InitializeASIErrorMessages();
 
+      // note that this name is different from the label that MM uses in e.g. SetProperty()
+
       // name property will be used to re-create the object by calling CreateDevice again with this parameter
       // if name isn't specified then skip this step (=> method for parent objects to delay setting name until child created)
       if (strcmp(name, "") != 0)
          this->CreateProperty(MM::g_Keyword_Name, name, MM::String, true);
    }
 
-   virtual ~ASIBase() { Shutdown(); }
+   virtual ~ASIBase() { }
 
    int Shutdown()
    {
@@ -113,6 +115,13 @@ protected:
       this->SetErrorText(ERR_TIGER_DEV_NOT_SUPPORTED, g_Msg_ERR_TIGER_DEV_NOT_SUPPORTED);
       this->SetErrorText(ERR_CRISP_NOT_CALIBRATED, g_Msg_ERR_CRISP_NOT_CALIBRATED);
       this->SetErrorText(ERR_CRISP_NOT_LOCKED, g_Msg_ERR_CRISP_NOT_LOCKED);
+      this->SetErrorText(ERR_UNKNOWN_COMMAND, g_Msg_ERR_UNKNOWN_COMMAND);
+      this->SetErrorText(ERR_UNKNOWN_AXIS, g_Msg_ERR_UNKNOWN_AXIS);
+      this->SetErrorText(ERR_MISSING_PARAM, g_Msg_ERR_MISSING_PARAM);
+      this->SetErrorText(ERR_PARAM_OUT_OF_RANGE, g_Msg_ERR_PARAM_OUT_OF_RANGE);
+      this->SetErrorText(ERR_OPERATION_FAILED, g_Msg_ERR_OPERATION_FAILED);
+      this->SetErrorText(ERR_UNDEFINED_ERROR, g_Msg_ERR_UNDEFINED_ERROR);
+      this->SetErrorText(ERR_INVALID_ADDRESS, g_Msg_ERR_INVALID_ADDRESS);
    }
 };
 

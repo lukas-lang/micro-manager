@@ -33,7 +33,7 @@ class CXYStage : public ASIPeripheralBase<CXYStageBase, CXYStage>
 {
 public:
    CXYStage(const char* name);
-   ~CXYStage() { Shutdown(); }
+   ~CXYStage() { }
   
    // Device API
    // ----------
@@ -58,7 +58,7 @@ public:
    int SetYOrigin();
    int Home();
    int SetHome();
-
+   int Move (double vx, double vy);
    int IsXYStageSequenceable(bool& isSequenceable) const { isSequenceable = false; return DEVICE_OK; }
    int GetXYStageSequenceMaxLength(long& nrEvents) const { nrEvents = 0; return DEVICE_OK; }
 
@@ -79,6 +79,7 @@ public:
    int OnWaitTime             (MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnNrExtraMoveReps      (MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnSpeedGeneric         (MM::PropertyBase* pProp, MM::ActionType eAct, string axisLetter);
+   int OnSpeedXMicronsPerSec  (MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnSpeedX               (MM::PropertyBase* pProp, MM::ActionType eAct) { return OnSpeedGeneric(pProp, eAct, axisLetterX_); }
    int OnSpeedY               (MM::PropertyBase* pProp, MM::ActionType eAct) { return OnSpeedGeneric(pProp, eAct, axisLetterY_); }
    int OnBacklashGeneric      (MM::PropertyBase* pProp, MM::ActionType eAct, string axisLetter);
@@ -134,6 +135,10 @@ public:
    int OnScanNumLines         (MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnScanSettlingTime     (MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnScanOvershootDistance (MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnVectorGeneric		  (MM::PropertyBase* pProp, MM::ActionType eAct, string axisLetter);
+   int OnVectorX			  (MM::PropertyBase* pProp, MM::ActionType eAct) { return OnVectorGeneric(pProp, eAct, axisLetterX_); }
+   int OnVectorY              (MM::PropertyBase* pProp, MM::ActionType eAct) { return OnVectorGeneric(pProp, eAct, axisLetterY_); }
+
 
 private:
    double unitMultX_;
@@ -144,6 +149,7 @@ private:
    string axisLetterY_;
    bool advancedPropsEnabled_;
    bool speedTruth_;
+   double lastSpeedX_;
 
    // private helper functions
    int OnSaveJoystickSettings();

@@ -50,7 +50,8 @@ ASIHub::ASIHub() :
       serialTerminator_(g_SerialTerminatorDefault),
       serialRepeatDuration_(0),
       serialRepeatPeriod_(500),
-      serialOnlySendChanged_(true)
+      serialOnlySendChanged_(true),
+      updatingSharedProperties_(false)
 {
    CPropertyAction* pAct = new CPropertyAction(this, &ASIHub::OnPort);
    CreateProperty(MM::g_Keyword_Port, "Undefined", MM::String, false, pAct, true);
@@ -157,17 +158,18 @@ int ASIHub::QueryCommandVerify(const char *command, const char *expectedReplyPre
 {
    RETURN_ON_MM_ERROR ( QueryCommand(command, replyTerminator, delayMs) );
    // if doesn't match expected prefix, then look for ASI error code
-   if (serialAnswer_.substr(0, strlen(expectedReplyPrefix)).compare(expectedReplyPrefix) != 0)
+   size_t len = strlen(expectedReplyPrefix);
+   if (serialAnswer_.length() < len ||
+         serialAnswer_.substr(0, len).compare(expectedReplyPrefix) != 0)
    {
-      int errNo = ParseErrorReply();
-      return errNo;
+      return ParseErrorReply();
    }
    return DEVICE_OK;
 }
 
 int ASIHub::ParseErrorReply() const
 {
-   if (serialAnswer_.substr(0, 2).compare(":N") == 0 && serialAnswer_.length() > 2)
+   if (serialAnswer_.length() > 3 && serialAnswer_.substr(0, 2).compare(":N") == 0)
    {
       int errNo = atoi(serialAnswer_.substr(3).c_str());
       return ERR_ASICODE_OFFSET + errNo;
@@ -472,6 +474,21 @@ string ASIHub::GetDefineString(const build_info_type build, const string substri
       }
    }
    return "";
+}
+
+int ASIHub::UpdateSharedProperties(string addressChar, string propName, string value) {
+   int ret = DEVICE_OK;
+   updatingSharedProperties_ = true;
+   for (map<string,string>::iterator it=deviceMap_.begin(); it!=deviceMap_.end(); ++it) {
+      if (addressChar == it->second) {
+         int ret_last = GetCoreCallback()->SetDeviceProperty(it->first.c_str(), propName.c_str(), value.c_str()) != DEVICE_OK;
+         if (ret_last!=DEVICE_OK) {
+            ret = ret_last;
+         }
+      }
+   }
+   updatingSharedProperties_ = false;
+   return ret;
 }
 
 int ASIHub::OnPort(MM::PropertyBase* pProp, MM::ActionType eAct)

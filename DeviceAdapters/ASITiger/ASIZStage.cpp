@@ -278,6 +278,10 @@ int CZStage::Initialize()
       AddAllowedValue(g_SAPatternPropertyName, g_SAPattern_0);
       AddAllowedValue(g_SAPatternPropertyName, g_SAPattern_1);
       AddAllowedValue(g_SAPatternPropertyName, g_SAPattern_2);
+	  if (FirmwareVersionAtLeast(3.14))
+	   {	//sin pattern was implemeted much later atleast firmware 3/14 needed
+		   AddAllowedValue(g_SAPatternPropertyName, g_SAPattern_3);
+	   }
       UpdateProperty(g_SAPatternPropertyName);
       // generates a set of additional advanced properties that are rarely used
       pAct = new CPropertyAction (this, &CZStage::OnSAAdvanced);
@@ -342,6 +346,12 @@ int CZStage::Initialize()
    {
       ttl_trigger_supported_ = true;
    }
+
+   //VectorMove
+   pAct = new CPropertyAction (this, &CZStage::OnVector);
+   CreateProperty(g_VectorPropertyName, "0", MM::Float, false, pAct);
+   SetPropertyLimits(g_VectorPropertyName, maxSpeed*-1, maxSpeed);
+   UpdateProperty(g_VectorPropertyName);
 
    initialized_ = true;
    return DEVICE_OK;
@@ -480,6 +490,7 @@ int CZStage::StartStageSequence()
    }
    // ensure that ringbuffer pointer points to first entry and
    // that we only trigger the first axis (assume only 1 axis on piezo card)
+   // TODO fix this so it doesn't assume 1st axis on card, this is copy/paste remnant from piezo
    command << addressChar_ << "RM Y=1 Z=0";
    RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(),":A") );
 
@@ -531,6 +542,13 @@ int CZStage::AddToStageSequence(double position)
    return DEVICE_OK;
 }
 
+int CZStage::Move(double velocity)
+{
+ostringstream command; command.str("");
+command << "VE " << axisLetter_ << "=" << velocity;
+return hub_->QueryCommandVerify(command.str(), ":A") ;
+
+}
 
 ////////////////
 // action handlers
@@ -558,6 +576,8 @@ int CZStage::OnSaveCardSettings(MM::PropertyBase* pProp, MM::ActionType eAct)
    string tmpstr;
    ostringstream command; command.str("");
    if (eAct == MM::AfterSet) {
+      if (hub_->UpdatingSharedProperties())
+         return DEVICE_OK;
       command << addressChar_ << "SS ";
       pProp->Get(tmpstr);
       if (tmpstr.compare(g_SaveSettingsOrig) == 0)
@@ -567,7 +587,7 @@ int CZStage::OnSaveCardSettings(MM::PropertyBase* pProp, MM::ActionType eAct)
       if (tmpstr.compare(g_SaveSettingsX) == 0)
          command << 'X';
       else if (tmpstr.compare(g_SaveSettingsY) == 0)
-         command << 'X';
+         command << 'Y';
       else if (tmpstr.compare(g_SaveSettingsZ) == 0)
          command << 'Z';
       else if (tmpstr.compare(g_SaveSettingsZJoystick) == 0)
@@ -578,6 +598,8 @@ int CZStage::OnSaveCardSettings(MM::PropertyBase* pProp, MM::ActionType eAct)
       }
       RETURN_ON_MM_ERROR (hub_->QueryCommandVerify(command.str(), ":A", (long)200));  // note added 200ms delay
       pProp->Set(g_SaveSettingsDone);
+      command.str(""); command << g_SaveSettingsDone;
+      RETURN_ON_MM_ERROR ( hub_->UpdateSharedProperties(addressChar_, pProp->GetName(), command.str()) );
    }
    return DEVICE_OK;
 }
@@ -1084,6 +1106,8 @@ int CZStage::OnJoystickFastSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
          return DEVICE_INVALID_PROPERTY_VALUE;
    }
    else if (eAct == MM::AfterSet) {
+      if (hub_->UpdatingSharedProperties())
+         return DEVICE_OK;
       pProp->Get(tmp);
 	  char joystickMirror[MM::MaxStrLength];
       RETURN_ON_MM_ERROR ( GetProperty(g_JoystickMirrorPropertyName, joystickMirror) );
@@ -1092,6 +1116,8 @@ int CZStage::OnJoystickFastSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
       else
          command << addressChar_ << "JS X=" << tmp;
       RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(), ":A") );
+      command.str(""); command << tmp;
+      RETURN_ON_MM_ERROR ( hub_->UpdateSharedProperties(addressChar_, pProp->GetName(), command.str()) );
    }
    return DEVICE_OK;
 }
@@ -1117,6 +1143,8 @@ int CZStage::OnJoystickSlowSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
          return DEVICE_INVALID_PROPERTY_VALUE;
    }
    else if (eAct == MM::AfterSet) {
+      if (hub_->UpdatingSharedProperties())
+         return DEVICE_OK;
       pProp->Get(tmp);
 	  char joystickMirror[MM::MaxStrLength];
       RETURN_ON_MM_ERROR ( GetProperty(g_JoystickMirrorPropertyName, joystickMirror) );
@@ -1125,6 +1153,8 @@ int CZStage::OnJoystickSlowSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
       else
          command << addressChar_ << "JS Y=" << tmp;
       RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(), ":A") );
+      command.str(""); command << tmp;
+      RETURN_ON_MM_ERROR ( hub_->UpdateSharedProperties(addressChar_, pProp->GetName(), command.str()) );
    }
    return DEVICE_OK;
 }
@@ -1154,6 +1184,8 @@ int CZStage::OnJoystickMirror(MM::PropertyBase* pProp, MM::ActionType eAct)
          return DEVICE_INVALID_PROPERTY_VALUE;
    }
    else if (eAct == MM::AfterSet) {
+      if (hub_->UpdatingSharedProperties())
+         return DEVICE_OK;
       string tmpstr;
       pProp->Get(tmpstr);
       double joystickFast = 0.0;
@@ -1165,6 +1197,7 @@ int CZStage::OnJoystickMirror(MM::PropertyBase* pProp, MM::ActionType eAct)
       else
          command << addressChar_ << "JS X=" << joystickFast << " Y=" << joystickSlow;
       RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(), ":A") );
+      RETURN_ON_MM_ERROR ( hub_->UpdateSharedProperties(addressChar_, pProp->GetName(), tmpstr.c_str()) );
    }
    return DEVICE_OK;
 }
@@ -1237,6 +1270,8 @@ int CZStage::OnWheelFastSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
          return DEVICE_INVALID_PROPERTY_VALUE;
    }
    else if (eAct == MM::AfterSet) {
+      if (hub_->UpdatingSharedProperties())
+         return DEVICE_OK;
       pProp->Get(tmp);
       char wheelMirror[MM::MaxStrLength];
       RETURN_ON_MM_ERROR ( GetProperty(g_WheelMirrorPropertyName, wheelMirror) );
@@ -1245,6 +1280,8 @@ int CZStage::OnWheelFastSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
       else
          command << addressChar_ << "JS F=" << tmp;
       RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(), ":A") );
+      command.str(""); command << tmp;
+      RETURN_ON_MM_ERROR ( hub_->UpdateSharedProperties(addressChar_, pProp->GetName(), command.str()) );
    }
    return DEVICE_OK;
 }
@@ -1268,6 +1305,8 @@ int CZStage::OnWheelSlowSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
          return DEVICE_INVALID_PROPERTY_VALUE;
    }
    else if (eAct == MM::AfterSet) {
+      if (hub_->UpdatingSharedProperties())
+         return DEVICE_OK;
       pProp->Get(tmp);
       char wheelMirror[MM::MaxStrLength];
       RETURN_ON_MM_ERROR ( GetProperty(g_JoystickMirrorPropertyName, wheelMirror) );
@@ -1276,6 +1315,8 @@ int CZStage::OnWheelSlowSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
       else
          command << addressChar_ << "JS T=" << tmp;
       RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(), ":A") );
+      command.str(""); command << tmp;
+      RETURN_ON_MM_ERROR ( hub_->UpdateSharedProperties(addressChar_, pProp->GetName(), command.str()) );
    }
    return DEVICE_OK;
 }
@@ -1303,6 +1344,8 @@ int CZStage::OnWheelMirror(MM::PropertyBase* pProp, MM::ActionType eAct)
          return DEVICE_INVALID_PROPERTY_VALUE;
    }
    else if (eAct == MM::AfterSet) {
+      if (hub_->UpdatingSharedProperties())
+         return DEVICE_OK;
       string tmpstr;
       pProp->Get(tmpstr);
       double wheelFast = 0.0;
@@ -1314,6 +1357,7 @@ int CZStage::OnWheelMirror(MM::PropertyBase* pProp, MM::ActionType eAct)
       else
          command << addressChar_ << "JS F=" << wheelFast << " T=" << wheelSlow;
       RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(), ":A") );
+      RETURN_ON_MM_ERROR ( hub_->UpdateSharedProperties(addressChar_, pProp->GetName(), tmpstr.c_str()) );
    }
    return DEVICE_OK;
 }
@@ -1530,7 +1574,8 @@ int CZStage::OnSAPattern(MM::PropertyBase* pProp, MM::ActionType eAct)
          case 0: success = pProp->Set(g_SAPattern_0); break;
          case 1: success = pProp->Set(g_SAPattern_1); break;
          case 2: success = pProp->Set(g_SAPattern_2); break;
-         default:success = 0;                      break;
+         case 3: success = pProp->Set(g_SAPattern_3); break;
+		 default:success = 0;                      break;
       }
       if (!success)
          return DEVICE_INVALID_PROPERTY_VALUE;
@@ -1544,7 +1589,9 @@ int CZStage::OnSAPattern(MM::PropertyBase* pProp, MM::ActionType eAct)
          tmp = 1;
       else if (tmpstr.compare(g_SAPattern_2) == 0)
          tmp = 2;
-      else
+      else if (tmpstr.compare(g_SAPattern_3) == 0)
+         tmp = 3;
+	  else
          return DEVICE_INVALID_PROPERTY_VALUE;
       // have to get current settings and then modify bits 0-2 from there
       command << "SAP " << axisLetter_ << "?";
@@ -1806,7 +1853,8 @@ int CZStage::OnRBMode(MM::PropertyBase* pProp, MM::ActionType eAct)
          return DEVICE_INVALID_PROPERTY_VALUE;
    }
    else if (eAct == MM::AfterSet) {
-
+      if (hub_->UpdatingSharedProperties())
+         return DEVICE_OK;
       string tmpstr;
       pProp->Get(tmpstr);
       if (tmpstr.compare(g_RB_OnePoint_1) == 0)
@@ -1819,6 +1867,7 @@ int CZStage::OnRBMode(MM::PropertyBase* pProp, MM::ActionType eAct)
          return DEVICE_INVALID_PROPERTY_VALUE;
       command << addressChar_ << "RM " << pseudoAxisChar << "=" << tmp;
       RETURN_ON_MM_ERROR( hub_->QueryCommandVerify(command.str(), ":A"));
+      RETURN_ON_MM_ERROR ( hub_->UpdateSharedProperties(addressChar_, pProp->GetName(), tmpstr.c_str()) );
    }
    return DEVICE_OK;
 }
@@ -1830,6 +1879,8 @@ int CZStage::OnRBTrigger(MM::PropertyBase* pProp, MM::ActionType eAct)
       pProp->Set(g_IdleState);
    }
    else  if (eAct == MM::AfterSet) {
+      if (hub_->UpdatingSharedProperties())
+         return DEVICE_OK;
       string tmpstr;
       pProp->Get(tmpstr);
       if (tmpstr.compare(g_DoItState) == 0)
@@ -1837,6 +1888,8 @@ int CZStage::OnRBTrigger(MM::PropertyBase* pProp, MM::ActionType eAct)
          command << addressChar_ << "RM";
          RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(), ":A") );
          pProp->Set(g_DoneState);
+         command.str(""); command << g_DoneState;
+         RETURN_ON_MM_ERROR ( hub_->UpdateSharedProperties(addressChar_, pProp->GetName(), command.str()) );
       }
    }
    return DEVICE_OK;
@@ -1874,6 +1927,8 @@ int CZStage::OnRBRunning(MM::PropertyBase* pProp, MM::ActionType eAct)
    {
       justSet = true;
       return OnRBRunning(pProp, MM::BeforeGet);
+      // TODO determine how to handle this with shared properties since ring buffer is per-card and not per-axis
+      // the reason this property exists (and why it's not a read-only property) are a bit hazy as of mid-2017
    }
    return DEVICE_OK;
 }
@@ -1893,9 +1948,13 @@ int CZStage::OnRBDelayBetweenPoints(MM::PropertyBase* pProp, MM::ActionType eAct
          return DEVICE_INVALID_PROPERTY_VALUE;
    }
    else if (eAct == MM::AfterSet) {
+      if (hub_->UpdatingSharedProperties())
+         return DEVICE_OK;
       pProp->Get(tmp);
       command << addressChar_ << "RT Z=" << tmp;
       RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(), ":A") );
+      command.str(""); command << tmp;
+      RETURN_ON_MM_ERROR ( hub_->UpdateSharedProperties(addressChar_, pProp->GetName(), command.str()) );
    }
    return DEVICE_OK;
 }
@@ -1919,3 +1978,26 @@ int CZStage::OnUseSequence(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
+int CZStage::OnVector(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   ostringstream command; command.str("");
+   ostringstream response; response.str("");
+   double tmp = 0;
+   if (eAct == MM::BeforeGet)
+   {
+      if (!refreshProps_ && initialized_)
+         return DEVICE_OK;
+      command << "VE " << axisLetter_ << "?";
+      response << ":A " << axisLetter_ << "=";
+      RETURN_ON_MM_ERROR( hub_->QueryCommandVerify(command.str(), response.str()));
+      RETURN_ON_MM_ERROR( hub_->ParseAnswerAfterEquals(tmp) );
+      if (!pProp->Set(tmp))
+         return DEVICE_INVALID_PROPERTY_VALUE;
+   }
+   else if (eAct == MM::AfterSet) {
+      pProp->Get(tmp);
+      command << "VE " << axisLetter_ << "=" << tmp;
+      RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(), ":A") );
+   }
+   return DEVICE_OK;
+}

@@ -38,6 +38,9 @@
 
 using namespace std;
 
+// Shared properties not implemented for piezo because as of mid-2017 any piezo
+//   occupies an entire card and so never would have another device sharing the same card.
+//   Exception is save settings b/c focus device could be on the same card but they won't share any properties.
 
 ///////////////////////////////////////////////////////////////////////////////
 // CPiezo
@@ -312,6 +315,10 @@ int CPiezo::Initialize()
       AddAllowedValue(g_SAPatternPropertyName, g_SAPattern_0);
       AddAllowedValue(g_SAPatternPropertyName, g_SAPattern_1);
       AddAllowedValue(g_SAPatternPropertyName, g_SAPattern_2);
+	  if (FirmwareVersionAtLeast(3.14))
+	   {	//sin pattern was implemeted much later atleast firmware 3/14 needed
+		   AddAllowedValue(g_SAPatternPropertyName, g_SAPattern_3);
+	   }
       UpdateProperty(g_SAPatternPropertyName);
       // generates a set of additional advanced properties that are rarely used
       pAct = new CPropertyAction (this, &CPiezo::OnSAAdvanced);
@@ -402,6 +409,12 @@ int CPiezo::Initialize()
       CreateProperty(g_AutoSleepDelayPropertyName, "5", MM::Integer, false, pAct);
       UpdateProperty(g_AutoSleepDelayPropertyName);
    }
+
+      //VectorMove
+   pAct = new CPropertyAction (this, &CPiezo::OnVector);
+   CreateProperty(g_VectorPropertyName, "0", MM::Float, false, pAct);
+   SetPropertyLimits(g_VectorPropertyName, -10,10); //hardcoded as -+10mm/sec , piezo r fast
+   UpdateProperty(g_VectorPropertyName);
 
    initialized_ = true;
    return DEVICE_OK;
@@ -621,8 +634,10 @@ int CPiezo::OnSaveCardSettings(MM::PropertyBase* pProp, MM::ActionType eAct)
    string tmpstr;
    ostringstream command; command.str("");
    if (eAct == MM::AfterSet) {
-      command << addressChar_ << "SS ";
+      if (hub_->UpdatingSharedProperties())
+         return DEVICE_OK;
       pProp->Get(tmpstr);
+      command << addressChar_ << "SS ";
       if (tmpstr.compare(g_SaveSettingsOrig) == 0)
          return DEVICE_OK;
       if (tmpstr.compare(g_SaveSettingsDone) == 0)
@@ -630,7 +645,7 @@ int CPiezo::OnSaveCardSettings(MM::PropertyBase* pProp, MM::ActionType eAct)
       if (tmpstr.compare(g_SaveSettingsX) == 0)
          command << 'X';
       else if (tmpstr.compare(g_SaveSettingsY) == 0)
-         command << 'X';
+         command << 'Y';
       else if (tmpstr.compare(g_SaveSettingsZ) == 0)
          command << 'Z';
       else if (tmpstr.compare(g_SaveSettingsZJoystick) == 0)
@@ -641,6 +656,8 @@ int CPiezo::OnSaveCardSettings(MM::PropertyBase* pProp, MM::ActionType eAct)
       }
       RETURN_ON_MM_ERROR (hub_->QueryCommandVerify(command.str(), ":A", (long)200));  // note 200ms delay added
       pProp->Set(g_SaveSettingsDone);
+      command.str(""); command << g_SaveSettingsDone;
+      RETURN_ON_MM_ERROR ( hub_->UpdateSharedProperties(addressChar_, pProp->GetName(), command.str()) );
    }
    return DEVICE_OK;
 }
@@ -1346,6 +1363,7 @@ int CPiezo::OnSAPattern(MM::PropertyBase* pProp, MM::ActionType eAct)
          case 0: success = pProp->Set(g_SAPattern_0); break;
          case 1: success = pProp->Set(g_SAPattern_1); break;
          case 2: success = pProp->Set(g_SAPattern_2); break;
+		 case 3: success = pProp->Set(g_SAPattern_3); break;
          default:success = 0;                      break;
       }
       if (!success)
@@ -1360,7 +1378,9 @@ int CPiezo::OnSAPattern(MM::PropertyBase* pProp, MM::ActionType eAct)
          tmp = 1;
       else if (tmpstr.compare(g_SAPattern_2) == 0)
          tmp = 2;
-      else
+      else if (tmpstr.compare(g_SAPattern_3) == 0)
+         tmp = 3;
+	  else
          return DEVICE_INVALID_PROPERTY_VALUE;
       // have to get current settings and then modify bits 0-2 from there
       command << "SAP " << axisLetter_ << "?";
@@ -1885,6 +1905,30 @@ int CPiezo::OnUseSequence(MM::PropertyBase* pProp, MM::ActionType eAct)
       pProp->Get(tmpstr);
       ttl_trigger_enabled_ = (ttl_trigger_supported_ && (tmpstr.compare(g_YesState) == 0));
       return OnUseSequence(pProp, MM::BeforeGet);  // refresh value
+   }
+   return DEVICE_OK;
+}
+
+   int CPiezo::OnVector(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   ostringstream command; command.str("");
+   ostringstream response; response.str("");
+   double tmp = 0;
+   if (eAct == MM::BeforeGet)
+   {
+      if (!refreshProps_ && initialized_)
+         return DEVICE_OK;
+      command << "VE " << axisLetter_ << "?";
+      response << ":A " << axisLetter_ << "=";
+      RETURN_ON_MM_ERROR( hub_->QueryCommandVerify(command.str(), response.str()));
+      RETURN_ON_MM_ERROR( hub_->ParseAnswerAfterEquals(tmp) );
+      if (!pProp->Set(tmp))
+         return DEVICE_INVALID_PROPERTY_VALUE;
+   }
+   else if (eAct == MM::AfterSet) {
+      pProp->Get(tmp);
+      command << "VE " << axisLetter_ << "=" << tmp;
+      RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(), ":A") );
    }
    return DEVICE_OK;
 }

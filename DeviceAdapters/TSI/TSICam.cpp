@@ -97,30 +97,6 @@ void BuildWhiteBalancedPipeline (TsiColorImage& tsiColorImg, TsiColorCamera* tsi
 
 }
 
-///////////////////////////////////////////////////////////////////////////////
-// Exported MMDevice API
-///////////////////////////////////////////////////////////////////////////////
-MODULE_API void InitializeModuleData()
-{
-   RegisterDevice(g_DeviceTsiCam, MM::CameraDevice, "Thorlabs Scientific Imaging camera");
-}
-
-MODULE_API void DeleteDevice(MM::Device* pDevice)
-{
-   delete pDevice;
-}
-
-MODULE_API MM::Device* CreateDevice(const char* deviceName)
-{
-   if (deviceName == 0)
-      return 0;
-   
-   if (strcmp(deviceName, g_DeviceTsiCam) == 0)
-      return new TsiCam();
-   
-   return 0;
-}
-
 TsiCam::TsiCam() :
    initialized(0), stopOnOverflow(false),
    acquiring(0),
@@ -224,6 +200,7 @@ int TsiCam::Initialize()
    CPropertyAction *pAct = new CPropertyAction (this, &TsiCam::OnExposure);
    ret = CreateProperty(MM::g_Keyword_Exposure, "2.0", MM::Float, false, pAct);
    assert(ret == DEVICE_OK);
+   SetPropertyLimits(MM::g_Keyword_Exposure, 0.0, TSI_MAX_EXPOSURE_MS);
 
    // gain
    pAct = new CPropertyAction (this, &TsiCam::OnGain);
@@ -563,7 +540,7 @@ int TsiCam::SnapImage()
    if (color)
    {
       MM::MMTime start = GetCurrentMMTime();
-      MM::MMTime timeout(4000000); // 4 sec timeout
+      MM::MMTime timeout(TSI_MAX_EXPOSURE_MS / 1000, 0); // upper limit on the exposure
       int err(TSI_NO_ERROR);
 
       bool computeWhiteBalanceCoefficients = false;
@@ -612,7 +589,7 @@ int TsiCam::SnapImage()
    {
       // grayscale image snap
       MM::MMTime start = GetCurrentMMTime();
-      MM::MMTime timeout(4, 0); // 4 sec timeout
+      MM::MMTime timeout(TSI_MAX_EXPOSURE_MS / 1000, 0); // upper limit on the exposure
       TsiImage* tsiImg = 0;
       do
       {
